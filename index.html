@@ -1,0 +1,2533 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="MinApp">
+<meta name="theme-color" content="#0f0f0f">
+<title>MinApp</title>
+<style>
+  :root {
+    --bg: #0f0f0f;
+    --bg2: #1a1a1a;
+    --bg3: #252525;
+    --border: #2e2e2e;
+    --text: #f0f0f0;
+    --text2: #9a9a9a;
+    --accent: #4f8ef7;
+    --accent2: #3a7ae0;
+    --green: #30d158;
+    --red: #ff453a;
+    --orange: #ff9f0a;
+    --purple: #bf5af2;
+    --pink: #ff375f;
+    --radius: 14px;
+    --radius-sm: 8px;
+    --nav-h: 84px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif; overflow: hidden; }
+
+  /* LAYOUT */
+  #app { display: flex; flex-direction: column; height: 100%; }
+  #header {
+    padding: env(safe-area-inset-top, 44px) 20px 12px;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: flex-end; justify-content: space-between;
+    min-height: calc(env(safe-area-inset-top, 44px) + 56px);
+    position: relative; z-index: 10;
+  }
+  #header h1 { font-size: 22px; font-weight: 700; }
+  #header .week-nav { display: flex; align-items: center; gap: 8px; }
+  #header .week-nav button { background: var(--bg3); border: none; color: var(--text); padding: 6px 12px; border-radius: var(--radius-sm); font-size: 14px; cursor: pointer; }
+  #header .week-nav span { font-size: 13px; color: var(--text2); min-width: 120px; text-align: center; }
+
+  #main { flex: 1; overflow-y: auto; padding: 16px 16px calc(var(--nav-h) + 8px); }
+
+  /* BOTTOM NAV */
+  #nav {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    height: var(--nav-h);
+    background: rgba(20,20,20,0.92);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-top: 1px solid var(--border);
+    display: flex; align-items: flex-start; justify-content: flex-start;
+    overflow-x: auto; -webkit-overflow-scrolling: touch;
+    padding-top: 10px;
+    padding-bottom: env(safe-area-inset-bottom, 20px);
+    scrollbar-width: none;
+  }
+  #nav::-webkit-scrollbar { display: none; }
+  .nav-btn {
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    background: none; border: none; color: var(--text2); cursor: pointer;
+    font-size: 9px; font-weight: 500; min-width: 52px; flex-shrink: 0; padding: 0 4px;
+    transition: color 0.15s;
+  }
+  .nav-btn .icon { font-size: 20px; line-height: 1; }
+  .nav-btn.active { color: var(--accent); }
+
+  /* VIEWS */
+  .view { display: none; }
+  .view.active { display: block; }
+
+  /* CARDS */
+  .card {
+    background: var(--bg2); border-radius: var(--radius);
+    border: 1px solid var(--border); padding: 16px; margin-bottom: 12px;
+  }
+  .card-title { font-size: 13px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; }
+
+  /* BUTTONS */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    padding: 12px 20px; border-radius: var(--radius-sm); border: none;
+    font-size: 15px; font-weight: 600; cursor: pointer; width: 100%;
+    transition: opacity 0.15s;
+  }
+  .btn:active { opacity: 0.7; }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-danger { background: var(--red); color: #fff; }
+  .btn-ghost { background: var(--bg3); color: var(--text); }
+  .btn-sm { padding: 8px 14px; font-size: 13px; width: auto; }
+
+  /* FORM */
+  .form-group { margin-bottom: 14px; }
+  .form-group label { display: block; font-size: 13px; color: var(--text2); margin-bottom: 6px; font-weight: 500; }
+  .form-group input, .form-group select, .form-group textarea {
+    width: 100%; background: var(--bg3); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); color: var(--text); font-size: 15px;
+    padding: 11px 14px; outline: none; font-family: inherit;
+  }
+  .form-group input:focus, .form-group select:focus { border-color: var(--accent); }
+  .form-group textarea { resize: none; min-height: 70px; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+  /* MODAL */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+    display: none; align-items: flex-end; z-index: 100;
+    padding: 0;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--bg2); border-radius: 20px 20px 0 0;
+    width: 100%; padding: 20px 20px calc(env(safe-area-inset-bottom, 20px) + 20px);
+    max-height: 90vh; overflow-y: auto;
+    border: 1px solid var(--border); border-bottom: none;
+  }
+  .modal-handle { width: 36px; height: 4px; background: var(--border); border-radius: 2px; margin: 0 auto 16px; }
+  .modal h2 { font-size: 18px; font-weight: 700; margin-bottom: 16px; }
+
+  /* WEEK GRID */
+  .week-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-bottom: 16px; }
+  .day-pill {
+    display: flex; flex-direction: column; align-items: center; padding: 8px 4px;
+    background: var(--bg3); border-radius: var(--radius-sm); cursor: pointer;
+    border: 2px solid transparent; transition: all 0.15s; position: relative;
+  }
+  .day-pill.selected { border-color: var(--accent); background: rgba(79,142,247,0.15); }
+  .day-pill .day-name { font-size: 11px; color: var(--text2); font-weight: 600; }
+  .day-pill .day-num { font-size: 16px; font-weight: 700; margin-top: 2px; }
+  .day-pill .dot-row { display: flex; gap: 3px; margin-top: 4px; min-height: 7px; }
+  .dot { width: 6px; height: 6px; border-radius: 50%; }
+
+  /* EVENT LIST */
+  .event-item {
+    display: flex; align-items: center; padding: 12px 14px;
+    background: var(--bg3); border-radius: var(--radius-sm);
+    margin-bottom: 8px; gap: 12px;
+  }
+  .event-color { width: 4px; height: 40px; border-radius: 2px; flex-shrink: 0; }
+  .event-info { flex: 1; }
+  .event-info .event-title { font-size: 15px; font-weight: 600; }
+  .event-info .event-time { font-size: 13px; color: var(--text2); margin-top: 2px; }
+  .event-delete { background: none; border: none; color: var(--text2); font-size: 18px; cursor: pointer; padding: 4px; }
+
+  /* STATS ROW */
+  .stats-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+  .stat-box { background: var(--bg3); border-radius: var(--radius-sm); padding: 14px; }
+  .stat-box .stat-val { font-size: 22px; font-weight: 700; }
+  .stat-box .stat-label { font-size: 12px; color: var(--text2); margin-top: 2px; }
+
+  /* FUEL LOG */
+  .fuel-entry {
+    background: var(--bg3); border-radius: var(--radius-sm); padding: 12px 14px;
+    margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between;
+  }
+  .fuel-entry .fuel-date { font-size: 13px; color: var(--text2); }
+  .fuel-entry .fuel-vals { text-align: right; }
+  .fuel-entry .fuel-vals .main { font-size: 15px; font-weight: 600; }
+  .fuel-entry .fuel-vals .sub { font-size: 12px; color: var(--text2); }
+
+  /* MONTH SELECTOR */
+  .month-tabs { display: flex; gap: 6px; overflow-x: auto; margin-bottom: 14px; padding-bottom: 2px; }
+  .month-tab { background: var(--bg3); border: none; color: var(--text2); padding: 7px 14px; border-radius: 20px; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+  .month-tab.active { background: var(--accent); color: #fff; }
+
+  /* CONFLICT BADGE */
+  .conflict-badge {
+    background: rgba(255,69,58,0.15); border: 1px solid var(--red);
+    border-radius: var(--radius-sm); padding: 10px 14px; margin-bottom: 10px;
+    display: flex; align-items: flex-start; gap: 10px;
+  }
+  .conflict-badge .icon { font-size: 18px; }
+  .conflict-badge .text { font-size: 13px; line-height: 1.5; }
+  .conflict-badge .text strong { color: var(--red); }
+
+  /* TAG PILLS */
+  .tag-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .tag-pill {
+    padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 600;
+    border: 2px solid transparent; cursor: pointer; background: var(--bg3); color: var(--text2);
+    transition: all 0.15s;
+  }
+  .tag-pill.selected { color: #fff; }
+
+  /* SECTION HEADER */
+  .section-hdr { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .section-hdr h2 { font-size: 20px; font-weight: 700; }
+
+  /* EMPTY STATE */
+  .empty { text-align: center; color: var(--text2); padding: 30px 0; font-size: 15px; }
+
+  /* RESULT ROW */
+  .result-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .result-row:last-child { border-bottom: none; }
+  .result-row .label { color: var(--text2); font-size: 14px; }
+  .result-row .value { font-size: 15px; font-weight: 600; }
+
+  /* TOGGLE */
+  .toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; }
+  .toggle { width: 51px; height: 31px; background: var(--bg3); border-radius: 16px; position: relative; cursor: pointer; border: 2px solid var(--border); transition: background 0.2s; }
+  .toggle.on { background: var(--green); border-color: var(--green); }
+  .toggle .thumb { position: absolute; top: 2px; left: 2px; width: 23px; height: 23px; background: #fff; border-radius: 50%; transition: left 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.3); }
+  .toggle.on .thumb { left: 22px; }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 0; }
+
+  /* TODOS */
+  .todo-item { display:flex; align-items:flex-start; gap:12px; padding:12px 0; border-bottom:1px solid var(--border); }
+  .todo-item:last-child { border-bottom:none; }
+  .todo-check { width:22px; height:22px; border-radius:50%; border:2px solid var(--border); cursor:pointer; flex-shrink:0; margin-top:1px; display:flex; align-items:center; justify-content:center; transition:all 0.2s; }
+  .todo-check.p1 { border-color:var(--red); }
+  .todo-check.p2 { border-color:var(--orange); }
+  .todo-check.p3 { border-color:var(--accent); }
+  .todo-check.done { background:var(--green); border-color:var(--green); }
+  .todo-body { flex:1; min-width:0; }
+  .todo-title { font-size:15px; line-height:1.4; word-break:break-word; }
+  .todo-title.done { text-decoration:line-through; color:var(--text2); }
+  .todo-meta { display:flex; align-items:center; gap:6px; margin-top:4px; flex-wrap:wrap; }
+  .todo-due { font-size:12px; font-weight:600; }
+  .todo-due.overdue { color:var(--red); }
+  .todo-due.today { color:var(--green); }
+  .todo-due.soon { color:var(--orange); }
+  .todo-due.later { color:var(--text2); }
+  .project-badge { font-size:11px; padding:2px 8px; border-radius:10px; font-weight:600; }
+  .todo-section-hdr { font-size:11px; font-weight:700; color:var(--text2); padding:14px 0 4px; text-transform:uppercase; letter-spacing:0.6px; }
+  .todo-expand { background:none; border:none; color:var(--text2); cursor:pointer; font-size:18px; padding:2px 4px; flex-shrink:0; }
+  .todo-detail { background:var(--bg3); border-radius:var(--radius-sm); padding:10px 12px; margin:8px 0 0 34px; display:none; }
+  .todo-detail.open { display:block; }
+  .todo-quick-bar { position:sticky; top:0; background:var(--bg); padding-bottom:10px; z-index:5; }
+  .todo-quick-input { display:flex; gap:10px; background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius); padding:12px 14px; align-items:center; }
+  .todo-quick-input input { flex:1; background:none; border:none; color:var(--text); font-size:15px; outline:none; font-family:inherit; }
+
+  /* HABITS */
+  .habit-item { display:flex; align-items:center; gap:12px; padding:12px 0; border-bottom:1px solid var(--border); }
+  .habit-item:last-child { border-bottom:none; }
+  .habit-btn { width:44px; height:44px; border-radius:50%; border:2px solid var(--border); background:none; cursor:pointer; font-size:20px; display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:all 0.2s; }
+  .habit-btn.done { border-color:transparent; }
+  .habit-info { flex:1; }
+  .habit-name { font-size:15px; font-weight:600; }
+  .habit-streak { font-size:12px; color:var(--text2); margin-top:2px; }
+  .habit-week { display:flex; gap:3px; margin-top:6px; }
+  .habit-dot { width:9px; height:9px; border-radius:50%; background:var(--bg3); }
+  .habit-dot.done { }
+  .habit-dot.today { ring:2px; }
+
+  /* CHARTS */
+  .chart-wrap { margin-top:4px; }
+  .chart-bars { display:flex; align-items:flex-end; gap:4px; height:64px; }
+  .chart-bar-col { flex:1; display:flex; flex-direction:column; align-items:center; gap:3px; height:100%; justify-content:flex-end; }
+  .chart-bar { width:100%; border-radius:3px 3px 0 0; min-height:2px; transition:height 0.4s; }
+  .chart-bar-val { font-size:9px; color:var(--text2); margin-bottom:1px; }
+  .chart-labels { display:flex; gap:4px; margin-top:5px; }
+  .chart-lbl { flex:1; font-size:9px; color:var(--text2); text-align:center; }
+
+  /* ØKONOMI */
+  .oko-section { margin-bottom:16px; }
+  .oko-row { display:flex; justify-content:space-between; align-items:center; padding:9px 0; border-bottom:1px solid var(--border); font-size:14px; }
+  .oko-row:last-child { border-bottom:none; }
+  .oko-row .lbl { color:var(--text2); }
+  .oko-row .val { font-weight:600; }
+  .net-box { background:var(--bg2); border-radius:var(--radius); padding:20px; text-align:center; margin-bottom:16px; border:1px solid var(--border); }
+  .net-box .net-val { font-size:36px; font-weight:800; }
+  .net-box .net-lbl { font-size:13px; color:var(--text2); margin-top:4px; }
+
+  /* MÅL */
+  .maal-card { background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius); padding:16px; margin-bottom:10px; }
+  .maal-row { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+  .maal-bar-bg { height:8px; background:var(--bg3); border-radius:4px; overflow:hidden; }
+  .maal-bar-fill { height:8px; border-radius:4px; transition:width 0.4s; }
+  .maal-sub { font-size:12px; color:var(--text2); margin-top:6px; }
+  .maal-input-row { display:flex; gap:8px; margin-top:10px; align-items:center; }
+  .maal-input-row input { flex:1; background:var(--bg3); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-size:14px; padding:9px 12px; outline:none; font-family:inherit; }
+</style>
+</head>
+<body>
+
+<div id="login-screen" style="position:fixed;inset:0;background:#0f0f0f;display:flex;align-items:center;justify-content:center;z-index:9999;padding:24px;">
+  <div style="width:100%;max-width:320px;text-align:center;">
+    <div style="font-size:48px;margin-bottom:8px;">🔐</div>
+    <h1 style="font-size:26px;font-weight:800;color:#f0f0f0;margin-bottom:4px;">MinApp</h1>
+    <p style="font-size:14px;color:#9a9a9a;margin-bottom:32px;">Indtast adgangskode</p>
+    <input type="password" id="login-pw" placeholder="••••"
+      style="width:100%;background:#1a1a1a;border:1px solid #2e2e2e;border-radius:14px;color:#f0f0f0;font-size:22px;text-align:center;padding:16px;outline:none;letter-spacing:8px;font-family:inherit;margin-bottom:12px;"
+      onkeydown="if(event.key==='Enter')checkPassword()">
+    <div id="login-error" style="color:#ff453a;font-size:14px;min-height:20px;margin-bottom:12px;"></div>
+    <button onclick="checkPassword()"
+      style="width:100%;background:#4f8ef7;border:none;border-radius:14px;color:#fff;font-size:16px;font-weight:700;padding:16px;cursor:pointer;">
+      Log ind
+    </button>
+  </div>
+</div>
+
+<div id="app" style="display:none;">
+
+  <div id="header">
+    <h1 id="page-title">Hjem</h1>
+    <div id="week-nav" class="week-nav" style="display:none;">
+      <button onclick="changeWeek(-1)">‹</button>
+      <span id="week-label"></span>
+      <button onclick="changeWeek(1)">›</button>
+    </div>
+  </div>
+
+  <div id="main">
+
+    <!-- ===== OVERBLIK ===== -->
+    <div id="view-overblik" class="view active">
+      <div id="overblik-dash"></div>
+      <div id="overblik-tracker"></div>
+      <div id="overblik-charts"></div>
+      <div id="overblik-data-section" style="margin-top:20px;">
+        <div class="card-title">Data</div>
+        <div class="card" style="display:flex;flex-direction:column;gap:10px;">
+          <button class="btn btn-ghost" onclick="exportData()">📤 Eksportér data</button>
+          <label class="btn btn-ghost" style="cursor:pointer;">
+            📥 Importér data
+            <input type="file" id="import-input" accept=".json" style="display:none" onchange="importData(event)">
+          </label>
+          <div id="import-status" style="font-size:13px;color:var(--text2);text-align:center;min-height:18px;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== PLANER ===== -->
+    <div id="view-planer" class="view">
+      <div id="overblik-today"></div>
+      <div id="overblik-upcoming"></div>
+      <div class="card" style="margin-bottom:10px">
+        <div id="planer-week"></div>
+      </div>
+      <div class="card">
+        <div id="planer-day-detail"></div>
+      </div>
+    </div>
+
+    <!-- ===== BRÆNDSTOF ===== -->
+    <div id="view-braendstof" class="view">
+      <div class="section-hdr">
+        <h2>Brændstof</h2>
+        <button class="btn btn-primary btn-sm" onclick="openModal('modal-fuel')">+ Tilføj</button>
+      </div>
+      <div id="fuel-month-tabs" class="month-tabs"></div>
+      <div id="fuel-summary" class="stats-row"></div>
+      <div class="card-title">Historik</div>
+      <div id="fuel-list"></div>
+    </div>
+
+    <!-- ===== TRÆNING ===== -->
+    <div id="view-traening" class="view">
+      <div class="section-hdr">
+        <h2>Træning</h2>
+        <button class="btn btn-primary btn-sm" onclick="openModal('modal-training')">+ Tilføj</button>
+      </div>
+      <div class="week-grid" id="training-week-grid"></div>
+      <div id="training-day-events"></div>
+    </div>
+
+    <!-- ===== SKOLE ===== -->
+    <div id="view-skole" class="view">
+      <div class="section-hdr">
+        <h2>Skole</h2>
+        <button class="btn btn-primary btn-sm" onclick="openModal('modal-school')">+ Tilføj</button>
+      </div>
+      <div class="week-grid" id="school-week-grid"></div>
+      <div id="school-day-events"></div>
+    </div>
+
+    <!-- ===== FT ===== -->
+    <div id="view-ft" class="view">
+      <div class="section-hdr">
+        <h2>Free Time</h2>
+        <button class="btn btn-primary btn-sm" onclick="openModal('modal-ft')">+ Tilføj</button>
+      </div>
+      <div class="week-grid" id="ft-week-grid"></div>
+      <div id="ft-day-events"></div>
+    </div>
+
+    <!-- ===== INDKØB ===== -->
+    <div id="view-indkoeb" class="view">
+      <div class="section-hdr">
+        <h2>Indkøb</h2>
+        <button class="btn btn-primary btn-sm" onclick="openModal('modal-indkoeb')">+ Tilføj</button>
+      </div>
+      <div id="indkoeb-goal-section" class="card" style="margin-bottom:12px"></div>
+      <div id="indkoeb-month-tabs" class="month-tabs"></div>
+      <div id="indkoeb-summary"></div>
+      <div class="card-title">Historik</div>
+      <div id="indkoeb-list"></div>
+    </div>
+
+    <!-- ===== ARBEJDE ===== -->
+    <div id="view-arbejde" class="view">
+      <div class="section-hdr">
+        <h2>Arbejde</h2>
+        <button class="btn btn-primary btn-sm" onclick="openModal('modal-arbejde')">+ Tilføj</button>
+      </div>
+      <div class="week-grid" id="arbejde-week-grid"></div>
+      <div id="arbejde-day-events"></div>
+    </div>
+
+    <!-- ===== TODOS ===== -->
+    <div id="view-todos" class="view">
+      <div class="todo-quick-bar">
+        <div class="todo-quick-input">
+          <span style="font-size:20px;color:var(--accent);line-height:1">+</span>
+          <input id="todo-quick-input" placeholder="Tilføj opgave..." onkeydown="if(event.key==='Enter')quickAddTodo()">
+          <button onclick="openTodoModal()" style="background:none;border:none;color:var(--text2);font-size:13px;cursor:pointer;white-space:nowrap">Detaljer</button>
+        </div>
+        <div id="todo-project-filter" style="display:flex;gap:6px;overflow-x:auto;margin-top:8px;padding-bottom:2px;scrollbar-width:none"></div>
+      </div>
+      <div id="todo-list"></div>
+    </div>
+
+    <!-- ===== HABITS ===== -->
+    <div id="view-habits" class="view">
+      <div class="section-hdr">
+        <h2>Habits</h2>
+        <button class="btn btn-primary btn-sm" onclick="openModal('modal-habit')">+ Tilføj</button>
+      </div>
+      <div class="card" style="margin-bottom:12px">
+        <div class="card-title">I dag</div>
+        <div id="habits-today"></div>
+      </div>
+      <div id="habits-week-card" style="display:none" class="card">
+        <div class="card-title">Denne uge</div>
+        <div id="habits-week"></div>
+      </div>
+    </div>
+
+    <!-- ===== MÅL ===== -->
+    <div id="view-maal" class="view">
+      <div class="section-hdr">
+        <h2>Mål</h2>
+        <div id="maal-month-selector" style="font-size:13px;color:var(--text2)"></div>
+      </div>
+      <div id="maal-content"></div>
+    </div>
+
+    <!-- ===== ØKONOMI ===== -->
+    <div id="view-okonomi" class="view">
+      <div class="section-hdr">
+        <h2>Økonomi</h2>
+      </div>
+      <div id="oko-month-tabs" class="month-tabs"></div>
+      <div id="oko-content"></div>
+    </div>
+
+  </div>
+
+  <!-- BOTTOM NAV -->
+  <div id="nav">
+    <button class="nav-btn active" onclick="showView('overblik',this)">
+      <span class="icon">📊</span><span>Overblik</span>
+    </button>
+    <button class="nav-btn" onclick="showView('planer',this)">
+      <span class="icon">📅</span><span>Planer</span>
+    </button>
+    <button class="nav-btn" onclick="showView('braendstof',this)">
+      <span class="icon">⛽</span><span>Brændstof</span>
+    </button>
+    <button class="nav-btn" onclick="showView('traening',this)">
+      <span class="icon">🏒</span><span>Træning</span>
+    </button>
+    <button class="nav-btn" onclick="showView('skole',this)">
+      <span class="icon">📚</span><span>Skole</span>
+    </button>
+    <button class="nav-btn" onclick="showView('ft',this)">
+      <span class="icon">🎉</span><span>FT</span>
+    </button>
+    <button class="nav-btn" onclick="showView('arbejde',this)">
+      <span class="icon">💼</span><span>Arbejde</span>
+    </button>
+    <button class="nav-btn" onclick="showView('indkoeb',this)">
+      <span class="icon">🛒</span><span>Indkøb</span>
+    </button>
+    <button class="nav-btn" onclick="showView('todos',this)">
+      <span class="icon">✅</span><span>Todos</span>
+    </button>
+    <button class="nav-btn" onclick="showView('habits',this)">
+      <span class="icon">🔥</span><span>Habits</span>
+    </button>
+    <button class="nav-btn" onclick="showView('maal',this)">
+      <span class="icon">🎯</span><span>Mål</span>
+    </button>
+    <button class="nav-btn" onclick="showView('okonomi',this)">
+      <span class="icon">💰</span><span>Økonomi</span>
+    </button>
+  </div>
+</div>
+
+<!-- ===== MODALS ===== -->
+
+<!-- INDKØB MODAL -->
+<div class="modal-overlay" id="modal-indkoeb">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h2>Tilføj indkøb</h2>
+    <div class="form-group"><label>Dato</label><input type="date" id="ik-date"></div>
+    <div class="form-group"><label>Beløb (kr)</label><input type="number" id="ik-amount" placeholder="245" step="0.01"></div>
+    <div class="form-group"><label>Note (valgfri)</label><input type="text" id="ik-note" placeholder="Eks. Netto, ICA, ugentlig indkøb..."></div>
+    <button class="btn btn-primary" onclick="saveIndkoeb()">Gem</button>
+    <button class="btn btn-ghost" style="margin-top:8px" onclick="closeModal('modal-indkoeb')">Annuller</button>
+  </div>
+</div>
+
+<!-- FUEL MODAL -->
+<div class="modal-overlay" id="modal-fuel">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h2>Tilføj tankning</h2>
+    <div class="form-group"><label>Dato</label><input type="date" id="fuel-date"></div>
+    <div class="form-row">
+      <div class="form-group"><label>Beløb (kr)</label><input type="number" id="fuel-amount" placeholder="450" step="0.01"></div>
+      <div class="form-group"><label>Km kørt</label><input type="number" id="fuel-km" placeholder="480" step="0.1"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Liter tanket</label><input type="number" id="fuel-liters" placeholder="42" step="0.01"></div>
+    </div>
+    <div id="fuel-calc-result" style="margin-bottom:14px;"></div>
+    <button class="btn btn-primary" onclick="saveFuel()">Gem</button>
+    <button class="btn btn-ghost" style="margin-top:8px" onclick="closeModal('modal-fuel')">Annuller</button>
+  </div>
+</div>
+
+<!-- TRAINING MODAL -->
+<div class="modal-overlay" id="modal-training">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h2>Tilføj træning</h2>
+    <div class="form-group"><label>Dag</label>
+      <select id="tr-date"></select>
+    </div>
+    <div class="form-group"><label>Type</label>
+      <div class="tag-row" id="tr-type-row">
+        <div class="tag-pill selected" style="border-color:#4f8ef7;background:rgba(79,142,247,0.2);color:#4f8ef7" data-val="hockey" onclick="selectTag(this,'tr-type-row','#4f8ef7')">🏒 Ishockey</div>
+        <div class="tag-pill" data-val="run" onclick="selectTag(this,'tr-type-row','#30d158')">🏃 Løb</div>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Start tidspunkt</label><input type="time" id="tr-start"></div>
+      <div class="form-group" id="tr-duration-group"><label>Varighed (min)</label><input type="number" id="tr-duration" placeholder="90"></div>
+    </div>
+    <div id="tr-run-fields" style="display:none;">
+      <div class="form-row">
+        <div class="form-group"><label>Km</label><input type="number" id="tr-km" placeholder="5" step="0.1"></div>
+        <div class="form-group"><label>Pace (min/km)</label><input type="number" id="tr-pace" placeholder="5.5" step="0.1"></div>
+      </div>
+    </div>
+    <div class="form-group"><label>Note (valgfri)</label><textarea id="tr-note" placeholder="Eks. intensiv træning..."></textarea></div>
+    <div id="tr-conflict" style="margin-bottom:10px;"></div>
+    <button class="btn btn-primary" onclick="saveTraining()">Gem</button>
+    <button class="btn btn-ghost" style="margin-top:8px" onclick="closeModal('modal-training')">Annuller</button>
+  </div>
+</div>
+
+<!-- SCHOOL MODAL -->
+<div class="modal-overlay" id="modal-school">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h2>Tilføj skoletid</h2>
+    <div class="form-group"><label>Dag</label><select id="sc-date"></select></div>
+    <div class="form-group"><label>Titel</label><input type="text" id="sc-title" placeholder="Eks. Statistik forelæsning"></div>
+    <div class="form-row">
+      <div class="form-group"><label>Start</label><input type="time" id="sc-start"></div>
+      <div class="form-group"><label>Slut</label><input type="time" id="sc-end"></div>
+    </div>
+    <div class="form-group"><label>Type</label>
+      <div class="tag-row" id="sc-type-row">
+        <div class="tag-pill selected" style="border-color:#bf5af2;background:rgba(191,90,242,0.2);color:#bf5af2" data-val="forelæsning" onclick="selectTag(this,'sc-type-row','#bf5af2')">📖 Forelæsning</div>
+        <div class="tag-pill" data-val="lektier" onclick="selectTag(this,'sc-type-row','#bf5af2')">✏️ Lektier</div>
+        <div class="tag-pill" data-val="opgave" onclick="selectTag(this,'sc-type-row','#bf5af2')">📝 Opgave</div>
+      </div>
+    </div>
+    <div class="form-group"><label>Note (valgfri)</label><textarea id="sc-note" placeholder="Eks. Kapitel 4-6..."></textarea></div>
+    <div id="sc-conflict" style="margin-bottom:10px;"></div>
+    <button class="btn btn-primary" onclick="saveSchool()">Gem</button>
+    <button class="btn btn-ghost" style="margin-top:8px" onclick="closeModal('modal-school')">Annuller</button>
+  </div>
+</div>
+
+<!-- ARBEJDE MODAL -->
+<div class="modal-overlay" id="modal-arbejde">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h2>Tilføj arbejde</h2>
+    <div class="form-group"><label>Dag</label><select id="arb-date"></select></div>
+    <div class="form-group"><label>Titel</label><input type="text" id="arb-title" placeholder="Eks. El-vagt, kamp nr. 3..."></div>
+    <div class="form-group"><label>Type</label>
+      <div class="tag-row" id="arb-type-row">
+        <div class="tag-pill selected" style="border-color:#34c759;background:rgba(52,199,89,0.2);color:#34c759" data-val="Elektriker" onclick="selectTag(this,'arb-type-row','#34c759');updateArbejdeFields()">⚡ Elektriker</div>
+        <div class="tag-pill" data-val="Ishockeydommer" onclick="selectTag(this,'arb-type-row','#4f8ef7');updateArbejdeFields()">🏒 Dommer</div>
+        <div class="tag-pill" data-val="Møde" onclick="selectTag(this,'arb-type-row','#ff9f0a');updateArbejdeFields()">🤝 Møde</div>
+        <div class="tag-pill" data-val="Andet" onclick="selectTag(this,'arb-type-row','#9a9a9a');updateArbejdeFields()">✨ Andet</div>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Start</label><input type="time" id="arb-start"></div>
+      <div class="form-group"><label>Slut</label><input type="time" id="arb-end"></div>
+    </div>
+    <div id="arb-dommer-fields" style="display:none;">
+      <div class="form-row">
+        <div class="form-group"><label>Honorar (kr)</label><input type="number" id="arb-honorar" placeholder="500" step="0.01"></div>
+        <div class="form-group"><label>Kørsel (kr)</label><input type="number" id="arb-koersel" placeholder="120" step="0.01"></div>
+      </div>
+    </div>
+    <div class="form-group"><label>Note (valgfri)</label><textarea id="arb-note" placeholder="Eks. Husk udstyr..."></textarea></div>
+    <div id="arb-conflict" style="margin-bottom:10px;"></div>
+    <button class="btn btn-primary" onclick="saveArbejde()">Gem</button>
+    <button class="btn btn-ghost" style="margin-top:8px" onclick="closeModal('modal-arbejde')">Annuller</button>
+  </div>
+</div>
+
+<!-- FT MODAL -->
+<div class="modal-overlay" id="modal-ft">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h2>Tilføj aftale</h2>
+    <div class="form-group"><label>Dag</label><select id="ft-date"></select></div>
+    <div class="form-group"><label>Titel</label><input type="text" id="ft-title" placeholder="Eks. Middag med familien"></div>
+    <div class="form-row">
+      <div class="form-group"><label>Start</label><input type="time" id="ft-start"></div>
+      <div class="form-group"><label>Slut</label><input type="time" id="ft-end"></div>
+    </div>
+    <div class="form-group"><label>Med hvem?</label>
+      <div class="tag-row" id="ft-who-row">
+        <div class="tag-pill selected" style="border-color:#ff9f0a;background:rgba(255,159,10,0.2);color:#ff9f0a" data-val="Familie" onclick="selectTag(this,'ft-who-row','#ff9f0a')">👨‍👩‍👦 Familie</div>
+        <div class="tag-pill" data-val="Caroline" onclick="selectTag(this,'ft-who-row','#ff9f0a')">💕 Caroline</div>
+        <div class="tag-pill" data-val="Venner" onclick="selectTag(this,'ft-who-row','#ff9f0a')">👥 Venner</div>
+        <div class="tag-pill" data-val="Andet" onclick="selectTag(this,'ft-who-row','#ff9f0a')">✨ Andet</div>
+      </div>
+    </div>
+    <div class="form-group"><label>Note (valgfri)</label><textarea id="ft-note" placeholder="Eks. Restaurant kl 19..."></textarea></div>
+    <div id="ft-conflict" style="margin-bottom:10px;"></div>
+    <button class="btn btn-primary" onclick="saveFT()">Gem</button>
+    <button class="btn btn-ghost" style="margin-top:8px" onclick="closeModal('modal-ft')">Annuller</button>
+  </div>
+</div>
+
+<!-- TODO MODAL -->
+<div class="modal-overlay" id="modal-todo">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h2>Tilføj opgave</h2>
+    <div class="form-group"><label>Titel</label><input type="text" id="td-title" placeholder="Hvad skal gøres?"></div>
+    <div class="form-group"><label>Note (valgfri)</label><textarea id="td-note" placeholder="Tilføj detaljer..."></textarea></div>
+    <div class="form-row">
+      <div class="form-group"><label>Forfaldsdato</label><input type="date" id="td-date"></div>
+      <div class="form-group"><label>Prioritet</label>
+        <select id="td-priority">
+          <option value="4">Ingen</option>
+          <option value="3">Lav 🔵</option>
+          <option value="2">Medium 🟠</option>
+          <option value="1">Høj 🔴</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group"><label>Projekt</label>
+      <div class="tag-row" id="td-project-row">
+        <div class="tag-pill selected" style="border-color:#9a9a9a;background:rgba(154,154,154,0.2);color:#9a9a9a" data-val="Inbox" onclick="selectTag(this,'td-project-row','#9a9a9a')">📥 Inbox</div>
+        <div class="tag-pill" data-val="Personlig" onclick="selectTag(this,'td-project-row','#4f8ef7')">👤 Personlig</div>
+        <div class="tag-pill" data-val="Skole" onclick="selectTag(this,'td-project-row','#bf5af2')">📚 Skole</div>
+        <div class="tag-pill" data-val="Arbejde" onclick="selectTag(this,'td-project-row','#34c759')">💼 Arbejde</div>
+      </div>
+    </div>
+    <button class="btn btn-primary" onclick="saveTodo()">Gem</button>
+    <button class="btn btn-ghost" style="margin-top:8px" onclick="closeModal('modal-todo');editingTodoId=null">Annuller</button>
+  </div>
+</div>
+
+<!-- HABIT MODAL -->
+<div class="modal-overlay" id="modal-habit">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h2>Tilføj vane</h2>
+    <div class="form-group"><label>Navn</label><input type="text" id="hb-name" placeholder="F.eks. Drik 2L vand"></div>
+    <div class="form-group"><label>Emoji / ikon</label><input type="text" id="hb-icon" placeholder="💧" maxlength="2" style="font-size:24px;text-align:center"></div>
+    <div class="form-group"><label>Farve</label>
+      <div class="tag-row" id="hb-color-row">
+        <div class="tag-pill selected" style="border-color:#4f8ef7;background:rgba(79,142,247,0.2);color:#4f8ef7" data-val="#4f8ef7" onclick="selectTag(this,'hb-color-row','#4f8ef7')">Blå</div>
+        <div class="tag-pill" data-val="#30d158" onclick="selectTag(this,'hb-color-row','#30d158')">Grøn</div>
+        <div class="tag-pill" data-val="#ff9f0a" onclick="selectTag(this,'hb-color-row','#ff9f0a')">Orange</div>
+        <div class="tag-pill" data-val="#ff453a" onclick="selectTag(this,'hb-color-row','#ff453a')">Rød</div>
+        <div class="tag-pill" data-val="#bf5af2" onclick="selectTag(this,'hb-color-row','#bf5af2')">Lilla</div>
+      </div>
+    </div>
+    <button class="btn btn-primary" onclick="saveHabit()">Gem</button>
+    <button class="btn btn-ghost" style="margin-top:8px" onclick="closeModal('modal-habit')">Annuller</button>
+  </div>
+</div>
+
+<script>
+// ===================== DATA =====================
+const DB = {
+  get: k => JSON.parse(localStorage.getItem(k) || '[]'),
+  set: (k, v) => localStorage.setItem(k, JSON.stringify(v)),
+  fuel: () => DB.get('fuel'),
+  events: () => DB.get('events'),
+  saveFuel: d => { const a = DB.fuel(); a.push(d); DB.set('fuel', a); },
+  saveEvent: d => { const a = DB.events(); a.push(d); DB.set('events', a); },
+  updateEvent: (id, upd) => DB.set('events', DB.events().map(e => e.id === id ? {...e, ...upd} : e)),
+  updateFuel: (id, upd) => DB.set('fuel', DB.fuel().map(e => e.id === id ? {...e, ...upd} : e)),
+  deleteEvent: id => DB.set('events', DB.events().filter(e => e.id !== id)),
+  deleteFuel: id => DB.set('fuel', DB.fuel().filter(e => e.id !== id)),
+  indkoeb: () => DB.get('indkoeb'),
+  saveIndkoeb: d => { const a = DB.indkoeb(); a.push(d); DB.set('indkoeb', a); },
+  updateIndkoeb: (id, upd) => DB.set('indkoeb', DB.indkoeb().map(e => e.id === id ? {...e, ...upd} : e)),
+  deleteIndkoeb: id => DB.set('indkoeb', DB.indkoeb().filter(e => e.id !== id)),
+  getIndkoebMaal: mo => parseFloat(localStorage.getItem('indkoebMaal_' + mo) || '0'),
+  setIndkoebMaal: (mo, v) => localStorage.setItem('indkoebMaal_' + mo, v),
+  // Todos
+  todos: () => DB.get('todos'),
+  saveTodo: d => { const a = DB.todos(); a.push(d); DB.set('todos', a); },
+  updateTodo: (id, upd) => DB.set('todos', DB.todos().map(t => t.id === id ? {...t, ...upd} : t)),
+  deleteTodo: id => DB.set('todos', DB.todos().filter(t => t.id !== id)),
+  // Habits
+  habitDefs: () => DB.get('habit_defs'),
+  saveHabitDef: d => { const a = DB.habitDefs(); a.push(d); DB.set('habit_defs', a); },
+  deleteHabitDef: id => DB.set('habit_defs', DB.habitDefs().filter(h => h.id !== id)),
+  getHabitDone: date => DB.get('hd_' + date),
+  toggleHabitDone: (date, id) => {
+    const a = DB.getHabitDone(date);
+    const idx = a.indexOf(id);
+    if (idx >= 0) a.splice(idx, 1); else a.push(id);
+    DB.set('hd_' + date, a);
+  },
+  // Mål
+  getMaal: mo => JSON.parse(localStorage.getItem('maal_' + mo) || '{}'),
+  setMaal: (mo, obj) => localStorage.setItem('maal_' + mo, JSON.stringify(obj)),
+};
+
+// Aktiv redigering
+let editingEventId = null;
+let editingFuelId = null;
+let editingIndkoebId = null;
+
+// ===================== WEEK HELPERS =====================
+let currentWeekOffset = 0;
+let selectedDay = {}; // {traening, skole, ft}
+
+const DAY_NAMES = ['Man','Tir','Ons','Tor','Fre','Lør','Søn'];
+const DAY_NAMES_FULL = ['Mandag','Tirsdag','Onsdag','Torsdag','Fredag','Lørdag','Søndag'];
+const MONTHS = ['januar','februar','marts','april','maj','juni','juli','august','september','oktober','november','december'];
+
+function getWeekDates(offset = 0) {
+  const today = new Date();
+  const day = today.getDay(); // 0=Sun
+  const monday = new Date(today);
+  monday.setDate(today.getDate() - (day === 0 ? 6 : day - 1) + offset * 7);
+  return Array.from({length: 7}, (_, i) => {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    return d;
+  });
+}
+
+function dateStr(d) {
+  return d.toISOString().split('T')[0];
+}
+
+function todayStr() { return dateStr(new Date()); }
+
+function formatDate(d) {
+  return `${d.getDate()}. ${MONTHS[d.getMonth()]}`;
+}
+
+function updateWeekLabel() {
+  const days = getWeekDates(currentWeekOffset);
+  const s = days[0], e = days[6];
+  document.getElementById('week-label').textContent =
+    `${s.getDate()}. ${MONTHS[s.getMonth()].slice(0,3)} – ${e.getDate()}. ${MONTHS[e.getMonth()].slice(0,3)}`;
+}
+
+function changeWeek(dir) {
+  currentWeekOffset += dir;
+  updateWeekLabel();
+  const view = document.querySelector('.view.active').id.replace('view-','');
+  if (view === 'traening') renderTrainingWeek();
+  if (view === 'skole') renderSchoolWeek();
+  if (view === 'ft') renderFTWeek();
+  if (view === 'arbejde') renderArbejdeWeek();
+  if (view === 'planer') renderPlaner();
+}
+
+// ===================== NAV =====================
+let currentView = 'hjem';
+
+function showView(name, btn) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('view-' + name).classList.add('active');
+  if (btn) btn.classList.add('active');
+  document.getElementById('page-title').textContent = {
+    overblik:'Overblik', planer:'Planer', braendstof:'Brændstof', traening:'Træning',
+    skole:'Skole', ft:'Free Time', arbejde:'Arbejde', indkoeb:'Indkøb',
+    todos:'Todos', habits:'Habits', maal:'Mål', okonomi:'Økonomi'
+  }[name];
+  const showWeekNav = ['traening','skole','ft','arbejde','planer'].includes(name);
+  document.getElementById('week-nav').style.display = showWeekNav ? 'flex' : 'none';
+  currentView = name;
+  updateWeekLabel();
+  if (name === 'overblik') renderOverblik();
+  if (name === 'planer') renderPlaner();
+  if (name === 'braendstof') renderFuel();
+  if (name === 'traening') renderTrainingWeek();
+  if (name === 'skole') renderSchoolWeek();
+  if (name === 'ft') renderFTWeek();
+  if (name === 'arbejde') renderArbejdeWeek();
+  if (name === 'indkoeb') renderIndkoeb();
+  if (name === 'todos') renderTodos();
+  if (name === 'habits') renderHabits();
+  if (name === 'maal') renderMaal();
+  if (name === 'okonomi') renderOkonomi();
+}
+
+// ===================== MODALS =====================
+function openModal(id) {
+  // Pre-fill date selects for current week
+  const modId = id.replace('modal-','');
+  const selId = {training:'tr-date', school:'sc-date', ft:'ft-date', arbejde:'arb-date'}[modId];
+  if (selId) populateDateSelect(selId);
+  // Pre-fill today's date for fuel
+  if (id === 'modal-fuel') document.getElementById('fuel-date').value = todayStr();
+  if (id === 'modal-indkoeb' && !editingIndkoebId) {
+    document.getElementById('ik-date').value = todayStr();
+    document.getElementById('ik-amount').value = '';
+    document.getElementById('ik-note').value = '';
+  }
+  // Show type-dependent fields for training
+  if (id === 'modal-arbejde') { populateDateSelect('arb-date'); updateArbejdeFields(); }
+  if (id === 'modal-training') updateTrainingFields();
+  document.getElementById(id).classList.add('open');
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+}
+
+document.querySelectorAll('.modal-overlay').forEach(o => {
+  o.addEventListener('click', e => {
+    if (e.target === o) {
+      o.classList.remove('open');
+      editingEventId = null;
+      editingFuelId = null;
+      editingIndkoebId = null;
+      // Nulstil modal-titler
+      resetModalTitle('modal-fuel', 'Tilføj tankning');
+      resetModalTitle('modal-training', 'Tilføj træning');
+      resetModalTitle('modal-school', 'Tilføj skoletid');
+      resetModalTitle('modal-ft', 'Tilføj aftale');
+      resetModalTitle('modal-arbejde', 'Tilføj arbejde');
+      resetModalTitle('modal-indkoeb', 'Tilføj indkøb');
+    }
+  });
+});
+
+function populateDateSelect(selId, preselectDate = null) {
+  const sel = document.getElementById(selId);
+  const days = getWeekDates(currentWeekOffset);
+  sel.innerHTML = '';
+  // Hvis preselectDate falder uden for ugen, tilføj den som første option
+  const weekDates = days.map(d => dateStr(d));
+  if (preselectDate && !weekDates.includes(preselectDate)) {
+    const d = new Date(preselectDate + 'T12:00:00');
+    const dayIdx = d.getDay() === 0 ? 6 : d.getDay() - 1;
+    const opt = document.createElement('option');
+    opt.value = preselectDate;
+    opt.textContent = `${DAY_NAMES_FULL[dayIdx]}, ${d.getDate()}. ${MONTHS[d.getMonth()]}`;
+    opt.selected = true;
+    sel.appendChild(opt);
+  }
+  days.forEach((d, i) => {
+    const opt = document.createElement('option');
+    opt.value = dateStr(d);
+    opt.textContent = `${DAY_NAMES_FULL[i]}, ${d.getDate()}. ${MONTHS[d.getMonth()]}`;
+    if (!preselectDate && dateStr(d) === todayStr()) opt.selected = true;
+    if (preselectDate && dateStr(d) === preselectDate) opt.selected = true;
+    sel.appendChild(opt);
+  });
+}
+
+// ===================== REDIGÉR EVENT =====================
+function editEvent(id) {
+  const e = DB.events().find(ev => ev.id === id);
+  if (!e) return;
+  editingEventId = id;
+
+  if (e.category === 'traening') {
+    populateDateSelect('tr-date', e.date);
+    // Sæt type
+    const typeVal = e.type === 'hockey' ? 'hockey' : 'run';
+    document.querySelectorAll('#tr-type-row .tag-pill').forEach(p => {
+      const isMatch = p.dataset.val === typeVal;
+      p.classList.toggle('selected', isMatch);
+      const col = typeVal === 'hockey' ? '#4f8ef7' : '#30d158';
+      if (isMatch) {
+        p.style.borderColor = col; p.style.background = hexToRgba(col, 0.2); p.style.color = col;
+      } else {
+        p.style.borderColor = 'transparent'; p.style.background = 'var(--bg3)'; p.style.color = 'var(--text2)';
+      }
+    });
+    updateTrainingFields();
+    document.getElementById('tr-start').value = e.startTime || '';
+    if (e.type === 'hockey') document.getElementById('tr-duration').value = e.details?.duration || 90;
+    if (e.type === 'run') {
+      document.getElementById('tr-km').value = e.details?.km || '';
+      document.getElementById('tr-pace').value = e.details?.pace || '';
+    }
+    document.getElementById('tr-note').value = e.note || '';
+    document.querySelector('#modal-training h2').textContent = 'Redigér træning';
+    document.getElementById('modal-training').classList.add('open');
+
+  } else if (e.category === 'skole') {
+    populateDateSelect('sc-date', e.date);
+    document.getElementById('sc-title').value = e.title || '';
+    document.getElementById('sc-start').value = e.startTime || '';
+    document.getElementById('sc-end').value = e.endTime || '';
+    setTagByVal('sc-type-row', e.type, '#bf5af2');
+    document.getElementById('sc-note').value = e.note || '';
+    document.querySelector('#modal-school h2').textContent = 'Redigér skoletid';
+    document.getElementById('modal-school').classList.add('open');
+
+  } else if (e.category === 'ft') {
+    populateDateSelect('ft-date', e.date);
+    document.getElementById('ft-title').value = e.title || '';
+    document.getElementById('ft-start').value = e.startTime || '';
+    document.getElementById('ft-end').value = e.endTime || '';
+    setTagByVal('ft-who-row', e.who, '#ff9f0a');
+    document.getElementById('ft-note').value = e.note || '';
+    document.querySelector('#modal-ft h2').textContent = 'Redigér aftale';
+    document.getElementById('modal-ft').classList.add('open');
+
+  } else if (e.category === 'arbejde') {
+    populateDateSelect('arb-date', e.date);
+    document.getElementById('arb-title').value = e.title || '';
+    document.getElementById('arb-start').value = e.startTime || '';
+    document.getElementById('arb-end').value = e.endTime || '';
+    setTagByVal('arb-type-row', e.type, ARB_TYPE_COLORS[e.type] || '#34c759');
+    updateArbejdeFields();
+    if (e.type === 'Ishockeydommer') {
+      document.getElementById('arb-honorar').value = e.honorar || '';
+      document.getElementById('arb-koersel').value = e.koersel || '';
+    }
+    document.getElementById('arb-note').value = e.note || '';
+    document.querySelector('#modal-arbejde h2').textContent = 'Redigér arbejde';
+    document.getElementById('modal-arbejde').classList.add('open');
+  }
+}
+
+function editFuel(id) {
+  const e = DB.fuel().find(f => f.id === id);
+  if (!e) return;
+  editingFuelId = id;
+  document.getElementById('fuel-date').value = e.date;
+  document.getElementById('fuel-amount').value = e.amount;
+  document.getElementById('fuel-km').value = e.km;
+  document.getElementById('fuel-liters').value = e.liters || '';
+  document.querySelector('#modal-fuel h2').textContent = 'Redigér tankning';
+  document.getElementById('modal-fuel').classList.add('open');
+}
+
+function setTagByVal(rowId, val, color) {
+  document.querySelectorAll(`#${rowId} .tag-pill`).forEach(p => {
+    const isMatch = p.dataset.val === val;
+    p.classList.toggle('selected', isMatch);
+    if (isMatch) {
+      p.style.borderColor = color; p.style.background = hexToRgba(color, 0.2); p.style.color = color;
+    } else {
+      p.style.borderColor = 'transparent'; p.style.background = 'var(--bg3)'; p.style.color = 'var(--text2)';
+    }
+  });
+}
+
+function resetModalTitle(modalId, defaultTitle) {
+  document.querySelector(`#${modalId} h2`).textContent = defaultTitle;
+}
+
+// ===================== TAG SELECT =====================
+function selectTag(el, rowId, color) {
+  document.querySelectorAll(`#${rowId} .tag-pill`).forEach(p => {
+    p.classList.remove('selected');
+    p.style.borderColor = 'transparent';
+    p.style.background = 'var(--bg3)';
+    p.style.color = 'var(--text2)';
+  });
+  el.classList.add('selected');
+  el.style.borderColor = color;
+  el.style.background = hexToRgba(color, 0.2);
+  el.style.color = color;
+  if (rowId === 'tr-type-row') updateTrainingFields();
+}
+
+function getSelected(rowId) {
+  const el = document.querySelector(`#${rowId} .tag-pill.selected`);
+  return el ? el.dataset.val : null;
+}
+
+function hexToRgba(hex, a) {
+  const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
+  return `rgba(${r},${g},${b},${a})`;
+}
+
+function updateTrainingFields() {
+  const type = getSelected('tr-type-row');
+  document.getElementById('tr-run-fields').style.display = type === 'run' ? 'block' : 'none';
+  document.getElementById('tr-duration-group').style.display = type === 'hockey' ? 'block' : 'none';
+}
+
+const ARB_TYPE_COLORS = { 'Elektriker': '#34c759', 'Ishockeydommer': '#4f8ef7', 'Møde': '#ff9f0a', 'Andet': '#9a9a9a' };
+
+function updateArbejdeFields() {
+  const type = getSelected('arb-type-row');
+  document.getElementById('arb-dommer-fields').style.display = type === 'Ishockeydommer' ? 'block' : 'none';
+}
+
+// ===================== CONFLICT CHECK =====================
+function timeToMin(t) {
+  if (!t) return null;
+  const [h, m] = t.split(':').map(Number);
+  return h * 60 + m;
+}
+
+function minToTime(m) {
+  const h = Math.floor(m / 60), min = m % 60;
+  return `${String(h).padStart(2,'0')}:${String(min).padStart(2,'0')}`;
+}
+
+function hasConflict(date, startMin, endMin, excludeId = null) {
+  const events = DB.events().filter(e => e.date === date && e.id !== excludeId);
+  for (const e of events) {
+    const es = timeToMin(e.startTime), ee = timeToMin(e.endTime);
+    if (es === null || ee === null) continue;
+    if (startMin < ee && endMin > es) return e;
+  }
+  return null;
+}
+
+function showConflictWarning(conflictEl, date, startMin, endMin) {
+  const c = hasConflict(date, startMin, endMin);
+  if (c) {
+    conflictEl.innerHTML = `<div class="conflict-badge">
+      <span class="icon">⚠️</span>
+      <span class="text"><strong>Tidspunkt overlapper!</strong><br>
+      "${c.title}" kl. ${c.startTime}–${c.endTime}</span></div>`;
+    return true;
+  }
+  conflictEl.innerHTML = '';
+  return false;
+}
+
+// ===================== SAVE FUEL =====================
+function saveFuel() {
+  const date = document.getElementById('fuel-date').value;
+  const amount = parseFloat(document.getElementById('fuel-amount').value);
+  const km = parseFloat(document.getElementById('fuel-km').value);
+  const liters = parseFloat(document.getElementById('fuel-liters').value);
+  if (!date || !amount || !km) { alert('Udfyld dato, beløb og km'); return; }
+  const kmPerLiter = liters ? parseFloat((km / liters).toFixed(2)) : null;
+  const pricePerKm = parseFloat((amount / km).toFixed(2));
+  const entry = { date, amount, km, liters: liters || null, kmPerLiter, pricePerKm };
+  if (editingFuelId) {
+    DB.updateFuel(editingFuelId, entry);
+    editingFuelId = null;
+  } else {
+    DB.saveFuel({ id: Date.now().toString(), ...entry });
+  }
+  resetModalTitle('modal-fuel', 'Tilføj tankning');
+  closeModal('modal-fuel');
+  renderFuel();
+}
+
+// ===================== SAVE TRAINING =====================
+function saveTraining() {
+  const date = document.getElementById('tr-date').value;
+  const type = getSelected('tr-type-row');
+  const start = document.getElementById('tr-start').value;
+  const note = document.getElementById('tr-note').value;
+  if (!date || !start) { alert('Vælg dag og starttidspunkt'); return; }
+
+  let endMin, title, details;
+  if (type === 'hockey') {
+    const dur = parseInt(document.getElementById('tr-duration').value) || 90;
+    endMin = timeToMin(start) + dur;
+    title = '🏒 Ishockey';
+    details = { duration: dur };
+  } else {
+    const km = parseFloat(document.getElementById('tr-km').value) || 5;
+    const pace = parseFloat(document.getElementById('tr-pace').value) || 5.5;
+    const durMin = Math.round(km * pace);
+    endMin = timeToMin(start) + durMin;
+    title = `🏃 Løb ${km}km`;
+    details = { km, pace };
+  }
+  const end = minToTime(endMin);
+  const cf = hasConflict(date, timeToMin(start), endMin, editingEventId);
+  if (cf) { alert(`Konflikt med "${cf.title}" kl. ${cf.startTime}–${cf.endTime}. Vælg et andet tidspunkt.`); return; }
+  const entry = { category: 'traening', type, date, startTime: start, endTime: end, title, note, details };
+  if (editingEventId) {
+    DB.updateEvent(editingEventId, entry);
+    editingEventId = null;
+  } else {
+    DB.saveEvent({ id: Date.now().toString(), ...entry });
+  }
+  resetModalTitle('modal-training', 'Tilføj træning');
+  closeModal('modal-training');
+  renderTrainingWeek();
+  document.getElementById('tr-note').value = '';
+}
+
+// ===================== SAVE SCHOOL =====================
+function saveSchool() {
+  const date = document.getElementById('sc-date').value;
+  const title = document.getElementById('sc-title').value || 'Skoletid';
+  const start = document.getElementById('sc-start').value;
+  const end = document.getElementById('sc-end').value;
+  const type = getSelected('sc-type-row');
+  const note = document.getElementById('sc-note').value;
+  if (!date || !start || !end) { alert('Udfyld dag, start og sluttidspunkt'); return; }
+  if (timeToMin(start) >= timeToMin(end)) { alert('Slut skal være efter start'); return; }
+  const cf = hasConflict(date, timeToMin(start), timeToMin(end), editingEventId);
+  if (cf) { alert(`Konflikt med "${cf.title}" kl. ${cf.startTime}–${cf.endTime}.`); return; }
+  const entry = { category: 'skole', type, date, startTime: start, endTime: end, title, note };
+  if (editingEventId) {
+    DB.updateEvent(editingEventId, entry);
+    editingEventId = null;
+  } else {
+    DB.saveEvent({ id: Date.now().toString(), ...entry });
+  }
+  resetModalTitle('modal-school', 'Tilføj skoletid');
+  closeModal('modal-school');
+  renderSchoolWeek();
+  document.getElementById('sc-title').value = '';
+  document.getElementById('sc-note').value = '';
+}
+
+// ===================== SAVE FT =====================
+function saveFT() {
+  const date = document.getElementById('ft-date').value;
+  const title = document.getElementById('ft-title').value || 'Aftale';
+  const start = document.getElementById('ft-start').value;
+  const end = document.getElementById('ft-end').value;
+  const who = getSelected('ft-who-row');
+  const note = document.getElementById('ft-note').value;
+  if (!date || !start || !end) { alert('Udfyld dag, start og sluttidspunkt'); return; }
+  if (timeToMin(start) >= timeToMin(end)) { alert('Slut skal være efter start'); return; }
+  const cf = hasConflict(date, timeToMin(start), timeToMin(end), editingEventId);
+  if (cf) { alert(`Konflikt med "${cf.title}" kl. ${cf.startTime}–${cf.endTime}.`); return; }
+  const entry = { category: 'ft', date, startTime: start, endTime: end, title, who, note };
+  if (editingEventId) {
+    DB.updateEvent(editingEventId, entry);
+    editingEventId = null;
+  } else {
+    DB.saveEvent({ id: Date.now().toString(), ...entry });
+  }
+  resetModalTitle('modal-ft', 'Tilføj aftale');
+  closeModal('modal-ft');
+  renderFTWeek();
+  document.getElementById('ft-title').value = '';
+  document.getElementById('ft-note').value = '';
+}
+
+// ===================== RENDER FUEL =====================
+let fuelSelectedMonth = null;
+
+function renderFuel() {
+  const entries = DB.fuel().sort((a,b) => b.date.localeCompare(a.date));
+  // Determine available months
+  const months = [...new Set(entries.map(e => e.date.slice(0,7)))].sort().reverse();
+  if (!fuelSelectedMonth || !months.includes(fuelSelectedMonth)) fuelSelectedMonth = months[0] || null;
+
+  // Month tabs
+  const tabsEl = document.getElementById('fuel-month-tabs');
+  tabsEl.innerHTML = months.map(m => {
+    const [y, mo] = m.split('-');
+    const label = `${MONTHS[parseInt(mo)-1].slice(0,3)} ${y}`;
+    return `<button class="month-tab ${m === fuelSelectedMonth ? 'active' : ''}" onclick="selectFuelMonth('${m}')">${label}</button>`;
+  }).join('') || '<span style="color:var(--text2);font-size:13px">Ingen tankninger endnu</span>';
+
+  const filtered = fuelSelectedMonth ? entries.filter(e => e.date.startsWith(fuelSelectedMonth)) : [];
+  const totalKr = filtered.reduce((s, e) => s + e.amount, 0);
+  const totalKm = filtered.reduce((s, e) => s + e.km, 0);
+  const avgPpk = totalKm ? (totalKr / totalKm).toFixed(2) : '–';
+
+  document.getElementById('fuel-summary').innerHTML = `
+    <div class="stat-box"><div class="stat-val">${totalKr.toFixed(0)} kr</div><div class="stat-label">Brugt på brændstof</div></div>
+    <div class="stat-box"><div class="stat-val">${totalKm.toFixed(0)} km</div><div class="stat-label">Kørte kilometer</div></div>
+    <div class="stat-box"><div class="stat-val">${avgPpk} kr</div><div class="stat-label">Gns. kr/km</div></div>
+    <div class="stat-box"><div class="stat-val">${filtered.length}</div><div class="stat-label">Tankninger</div></div>
+  `;
+
+  const listEl = document.getElementById('fuel-list');
+  if (filtered.length === 0) {
+    listEl.innerHTML = '<div class="empty">Ingen tankninger denne måned</div>';
+    return;
+  }
+  listEl.innerHTML = filtered.map(e => `
+    <div class="fuel-entry">
+      <div>
+        <div class="fuel-date">${formatDate(new Date(e.date + 'T12:00:00'))}</div>
+        <div style="font-weight:600;margin-top:2px">${e.amount} kr · ${e.km} km</div>
+        <div style="font-size:12px;color:var(--text2)">${e.liters ? e.liters + 'L · ' : ''}${e.kmPerLiter ? e.kmPerLiter + ' km/L · ' : ''}${e.pricePerKm} kr/km</div>
+      </div>
+      <div style="display:flex;gap:4px;align-items:center">
+        <button onclick="editFuel('${e.id}')" style="background:none;border:none;font-size:16px;cursor:pointer;padding:4px">✏️</button>
+        <button onclick="deleteFuel('${e.id}')" style="background:none;border:none;color:var(--text2);font-size:20px;cursor:pointer;padding:4px">🗑</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function selectFuelMonth(m) {
+  fuelSelectedMonth = m;
+  renderFuel();
+}
+
+function deleteFuel(id) {
+  if (confirm('Slet tankning?')) { DB.deleteFuel(id); renderFuel(); }
+}
+
+// ===================== RENDER WEEK GRID =====================
+function renderWeekGrid(containerId, category, selectedDate, onSelect) {
+  const days = getWeekDates(currentWeekOffset);
+  const events = DB.events();
+  const colorMap = { traening: '#4f8ef7', skole: '#bf5af2', ft: '#ff9f0a', arbejde: '#34c759' };
+
+  const container = document.getElementById(containerId);
+  container.innerHTML = days.map((d, i) => {
+    const ds = dateStr(d);
+    const dayEvents = events.filter(e => e.date === ds);
+    const cats = [...new Set(dayEvents.map(e => e.category))];
+    const dots = cats.map(c => `<div class="dot" style="background:${colorMap[c]}"></div>`).join('');
+    const isToday = ds === todayStr();
+    const isSelected = ds === selectedDate;
+    return `<div class="day-pill ${isSelected ? 'selected' : ''}" onclick="${onSelect}('${ds}')">
+      <div class="day-name" style="${isToday ? 'color:var(--accent)' : ''}">${DAY_NAMES[i]}</div>
+      <div class="day-num" style="${isToday ? 'color:var(--accent);font-weight:800' : ''}">${d.getDate()}</div>
+      <div class="dot-row">${dots}</div>
+    </div>`;
+  }).join('');
+}
+
+// ===================== RENDER TRAINING =====================
+function renderTrainingWeek() {
+  const days = getWeekDates(currentWeekOffset);
+  const today = todayStr();
+  if (!selectedDay.traening) selectedDay.traening = days.find(d => dateStr(d) === today) ? today : dateStr(days[0]);
+  renderWeekGrid('training-week-grid', 'traening', selectedDay.traening, 'selectTrainingDay');
+  renderDayEvents('training-day-events', selectedDay.traening, 'traening', '#4f8ef7');
+}
+
+function selectTrainingDay(ds) {
+  selectedDay.traening = ds;
+  renderTrainingWeek();
+}
+
+// ===================== RENDER SCHOOL =====================
+function renderSchoolWeek() {
+  const days = getWeekDates(currentWeekOffset);
+  const today = todayStr();
+  if (!selectedDay.skole) selectedDay.skole = days.find(d => dateStr(d) === today) ? today : dateStr(days[0]);
+  renderWeekGrid('school-week-grid', 'skole', selectedDay.skole, 'selectSchoolDay');
+  renderDayEvents('school-day-events', selectedDay.skole, 'skole', '#bf5af2');
+}
+
+function selectSchoolDay(ds) {
+  selectedDay.skole = ds;
+  renderSchoolWeek();
+}
+
+// ===================== RENDER FT =====================
+function renderFTWeek() {
+  const days = getWeekDates(currentWeekOffset);
+  const today = todayStr();
+  if (!selectedDay.ft) selectedDay.ft = days.find(d => dateStr(d) === today) ? today : dateStr(days[0]);
+  renderWeekGrid('ft-week-grid', 'ft', selectedDay.ft, 'selectFTDay');
+  renderDayEvents('ft-day-events', selectedDay.ft, 'ft', '#ff9f0a');
+}
+
+function selectFTDay(ds) {
+  selectedDay.ft = ds;
+  renderFTWeek();
+}
+
+// ===================== RENDER DAY EVENTS =====================
+function renderDayEvents(containerId, date, category, color) {
+  const events = DB.events().filter(e => e.date === date && e.category === category)
+    .sort((a,b) => (a.startTime || '').localeCompare(b.startTime || ''));
+  const d = new Date(date + 'T12:00:00');
+  const label = `${DAY_NAMES_FULL[d.getDay() === 0 ? 6 : d.getDay()-1]}, ${d.getDate()}. ${MONTHS[d.getMonth()]}`;
+
+  const container = document.getElementById(containerId);
+  container.innerHTML = `<div class="card-title">${label}</div>`;
+
+  if (events.length === 0) {
+    container.innerHTML += '<div class="empty">Ingen aftaler denne dag</div>';
+    return;
+  }
+  container.innerHTML += events.map(e => {
+    let sub = `${e.startTime}–${e.endTime}`;
+    if (e.category === 'traening' && e.type === 'run') sub += ` · ${e.details?.km}km @ ${e.details?.pace}min/km`;
+    if (e.category === 'traening' && e.type === 'hockey') sub += ` · ${e.details?.duration} min`;
+    if (e.category === 'ft' && e.who) sub += ` · ${e.who}`;
+    if (e.category === 'skole' && e.type) sub += ` · ${e.type}`;
+    if (e.category === 'arbejde' && e.type === 'Ishockeydommer') sub += ` · Honorar: ${e.honorar||0} kr · Kørsel: ${e.koersel||0} kr`;
+    else if (e.category === 'arbejde' && e.type) sub += ` · ${e.type}`;
+    return `<div class="event-item">
+      <div class="event-color" style="background:${color}"></div>
+      <div class="event-info">
+        <div class="event-title">${e.title}</div>
+        <div class="event-time">${sub}${e.note ? ' · ' + e.note : ''}</div>
+      </div>
+      <button class="event-delete" onclick="editEvent('${e.id}')" style="font-size:16px;margin-right:2px">✏️</button>
+      <button class="event-delete" onclick="deleteEvent('${e.id}','${containerId}','${date}','${category}','${color}')">✕</button>
+    </div>`;
+  }).join('');
+}
+
+function deleteEvent(id, containerId, date, category, color) {
+  if (confirm('Slet aftale?')) {
+    DB.deleteEvent(id);
+    renderDayEvents(containerId, date, category, color);
+    // Re-render week grid dots
+    if (category === 'traening') renderTrainingWeek();
+    if (category === 'skole') renderSchoolWeek();
+    if (category === 'ft') renderFTWeek();
+    if (currentView === 'overblik') renderOverblik();
+    if (currentView === 'planer') renderPlaner();
+  }
+}
+
+// ===================== RENDER OVERBLIK =====================
+function renderOverblik() {
+  renderDash();
+  renderTracker();
+  document.getElementById('overblik-charts').innerHTML = renderStatCharts();
+}
+
+function renderDash() {
+  const today = todayStr();
+  const d = new Date();
+  const hour = d.getHours();
+  const greeting = hour < 12 ? 'Godmorgen' : hour < 18 ? 'God eftermiddag' : 'Godaften';
+
+  // Today events
+  const events = DB.events().filter(e => e.date === today).sort((a,b) => a.startTime.localeCompare(b.startTime));
+  const colorMap = { traening:'#4f8ef7', skole:'#bf5af2', ft:'#ff9f0a', arbejde:'#34c759' };
+
+  // Todos due today or overdue
+  const todayTodos = DB.todos().filter(t => !t.completed && t.dueDate && t.dueDate <= today);
+
+  // Habits today
+  const habits = DB.habitDefs();
+  const habitDone = DB.getHabitDone(today);
+  const habitCount = habitDone.filter(id => habits.find(h => h.id === id)).length;
+
+  const el = document.getElementById('overblik-dash');
+  el.innerHTML = `
+    <div style="padding:8px 0 16px">
+      <div style="font-size:22px;font-weight:800">${greeting}, Gustav 👋</div>
+      <div style="font-size:14px;color:var(--text2);margin-top:2px">${DAY_NAMES_FULL[d.getDay()===0?6:d.getDay()-1]}, ${d.getDate()}. ${MONTHS[d.getMonth()]} ${d.getFullYear()}</div>
+    </div>
+
+    ${habits.length > 0 ? `<div class="card" style="margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <span style="font-weight:700">🔥 Habits i dag</span>
+        <span style="font-size:18px;font-weight:800;color:${habitCount===habits.length?'var(--green)':'var(--text)'}">${habitCount}/${habits.length}</span>
+      </div>
+      <div style="height:6px;background:var(--bg3);border-radius:3px;overflow:hidden;margin-bottom:10px">
+        <div style="height:6px;background:var(--green);border-radius:3px;width:${habits.length>0?Math.round(habitCount/habits.length*100):0}%"></div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        ${habits.map(h => {
+          const done = habitDone.includes(h.id);
+          return `<div onclick="toggleHabit('${today}','${h.id}');renderDash()" style="display:flex;align-items:center;gap:6px;background:${done?hexToRgba(h.color,0.15):'var(--bg3)'};border:1px solid ${done?h.color:'var(--border)'};border-radius:20px;padding:6px 12px;cursor:pointer">
+            <span style="font-size:14px">${done?'✓':h.icon}</span>
+            <span style="font-size:12px;font-weight:600;color:${done?h.color:'var(--text2)'}">${h.name}</span>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>` : ''}
+
+    ${todayTodos.length > 0 ? `<div class="card" style="margin-bottom:10px">
+      <div class="card-title">✅ Opgaver i dag (${todayTodos.length})</div>
+      ${todayTodos.slice(0,4).map(t => {
+        const pc = PRIORITY_COLORS[t.priority||4];
+        return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
+          <div style="width:16px;height:16px;border-radius:50%;border:2px solid ${pc};flex-shrink:0;cursor:pointer" onclick="toggleTodo('${t.id}');renderDash()"></div>
+          <span style="font-size:14px;flex:1">${t.title}</span>
+          ${t.dueDate < today ? '<span style="font-size:11px;color:var(--red);font-weight:600">Overskredet</span>' : ''}
+        </div>`;
+      }).join('')}
+      ${todayTodos.length > 4 ? `<div style="font-size:12px;color:var(--text2);padding-top:6px">+${todayTodos.length-4} mere</div>` : ''}
+    </div>` : ''}
+
+    ${(() => {
+      const mo = today.slice(0,7);
+      const lon = getLonPeriod();
+      const lonStart = dateStr(lon.start), lonEnd = dateStr(lon.end);
+      const allEv = DB.events();
+      const elHrs = allEv.filter(e=>e.category==='arbejde'&&e.type==='Elektriker'&&e.date>=lonStart&&e.date<lonEnd).reduce((s,e)=>s+getDurationHours(e.startTime,e.endTime),0);
+      const domEv = allEv.filter(e=>e.category==='arbejde'&&e.type==='Ishockeydommer'&&e.date.startsWith(mo));
+      const domKr = domEv.reduce((s,e)=>s+(e.honorar||0)+(e.koersel||0),0);
+      const totalInd = Math.round(elHrs*ELEKTRIKER_RATE + domKr);
+      if (totalInd === 0) return '';
+      return `<div class="card" style="margin-bottom:10px">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span style="font-weight:700">💰 Estimeret indtægt</span>
+          <span style="font-size:20px;font-weight:800;color:var(--green)">${totalInd.toLocaleString('da-DK')} kr</span>
+        </div>
+        <div style="font-size:12px;color:var(--text2);margin-top:6px;display:flex;gap:12px">
+          ${elHrs>0?`<span>⚡ ${fmtH(elHrs)} elektriker</span>`:''}
+          ${domKr>0?`<span>🏒 ${domEv.length} kampe dommer</span>`:''}
+        </div>
+      </div>`;
+    })()}
+
+    <div class="card" style="margin-bottom:10px">
+      <div class="card-title">📅 I dag</div>
+      ${events.length === 0
+        ? '<div style="font-size:13px;color:var(--text2)">Ingen aftaler i dag 🎉</div>'
+        : events.map(e => `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
+            <div style="width:4px;height:36px;border-radius:2px;background:${colorMap[e.category]||'#8e8e93'};flex-shrink:0"></div>
+            <div><div style="font-size:14px;font-weight:600">${e.title}</div>
+            <div style="font-size:12px;color:var(--text2)">${e.startTime}–${e.endTime}</div></div>
+          </div>`).join('')}
+    </div>
+  `;
+}
+
+// ===================== RENDER PLANER =====================
+function renderPlaner() {
+  renderToday();
+  renderUpcoming();
+  renderPlanerWeek();
+  renderPlanerDay(todayStr());
+}
+
+function renderPlanerWeek() {
+  const el = document.getElementById('planer-week');
+  if (!el) return;
+  const events = DB.events();
+  const colorMap = { traening: '#4f8ef7', skole: '#bf5af2', ft: '#ff9f0a', arbejde: '#34c759' };
+
+  // Beregn mandag for aktuel uge (brug planerWeekOffset)
+  const today = new Date();
+  const dow = (today.getDay() + 6) % 7;
+  const monday = new Date(today);
+  monday.setDate(today.getDate() - dow + (window.planerWeekOffset || 0) * 7);
+
+  const days = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    days.push(d);
+  }
+
+  const DAYS_SHORT = ['Man','Tir','Ons','Tor','Fre','Lør','Søn'];
+  const todayS = todayStr();
+
+  // Header med uge-navigation
+  const weekStart = dateStr(monday);
+  const weekEnd = dateStr(days[6]);
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <button onclick="changePlanerWeek(-1)" style="background:none;border:none;font-size:22px;color:var(--text);cursor:pointer;padding:4px 10px">‹</button>
+      <span style="font-size:14px;font-weight:600;color:var(--text2)">${days[0].getDate()}. ${MONTHS[days[0].getMonth()].slice(0,3)} – ${days[6].getDate()}. ${MONTHS[days[6].getMonth()].slice(0,3)}</span>
+      <button onclick="changePlanerWeek(1)" style="background:none;border:none;font-size:22px;color:var(--text);cursor:pointer;padding:4px 10px">›</button>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px">
+      ${days.map((d, i) => {
+        const ds = dateStr(d);
+        const dayEv = events.filter(e => e.date === ds).sort((a,b) => a.startTime.localeCompare(b.startTime));
+        const isToday = ds === todayS;
+        const dots = [...new Set(dayEv.map(e => colorMap[e.category] || '#8e8e93'))];
+        return `<div onclick="selectPlanerDay('${ds}')" id="planer-day-${ds}" style="
+          background:${isToday ? 'var(--accent)' : 'var(--bg2)'};
+          border-radius:var(--radius-sm);padding:8px 4px;text-align:center;cursor:pointer;
+          border:2px solid ${isToday ? 'var(--accent)' : 'transparent'};min-height:62px">
+          <div style="font-size:11px;color:${isToday?'#fff':'var(--text2)'};margin-bottom:2px">${DAYS_SHORT[i]}</div>
+          <div style="font-size:18px;font-weight:700;color:${isToday?'#fff':'var(--text)'}">${d.getDate()}</div>
+          <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:2px;margin-top:4px">
+            ${dots.map(c => `<div style="width:7px;height:7px;border-radius:50%;background:${c}"></div>`).join('')}
+          </div>
+        </div>`;
+      }).join('')}
+    </div>
+  `;
+}
+
+window.planerWeekOffset = 0;
+window.planerSelectedDay = todayStr ? todayStr() : '';
+
+function changePlanerWeek(dir) {
+  window.planerWeekOffset = (window.planerWeekOffset || 0) + dir;
+  renderPlanerWeek();
+}
+
+function selectPlanerDay(ds) {
+  window.planerSelectedDay = ds;
+  renderPlanerDay(ds);
+}
+
+function renderPlanerDay(ds) {
+  const el = document.getElementById('planer-day-detail');
+  if (!el) return;
+  const events = DB.events().filter(e => e.date === ds).sort((a,b) => a.startTime.localeCompare(b.startTime));
+  const colorMap = { traening: '#4f8ef7', skole: '#bf5af2', ft: '#ff9f0a', arbejde: '#34c759' };
+  const catLabel = { traening: 'Træning', skole: 'Skole', ft: 'Free Time', arbejde: 'Arbejde' };
+  const d = new Date(ds + 'T12:00:00');
+  const DAYS = ['Søndag','Mandag','Tirsdag','Onsdag','Torsdag','Fredag','Lørdag'];
+
+  el.innerHTML = `
+    <div style="font-weight:700;font-size:16px;margin-bottom:10px">${DAYS[d.getDay()]} d. ${d.getDate()}. ${MONTHS[d.getMonth()]}</div>
+    ${events.length === 0
+      ? `<div style="font-size:14px;color:var(--text2)">Ingen aftaler</div>`
+      : events.map(e => {
+          const color = colorMap[e.category] || '#8e8e93';
+          const label = catLabel[e.category] || e.category;
+          const sub = e.type ? ` · ${e.type}` : '';
+          const hvem = e.who ? ` · ${e.who}` : '';
+          return `<div style="display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">
+            <div style="width:4px;min-height:40px;border-radius:2px;background:${color};flex-shrink:0;margin-top:2px"></div>
+            <div style="flex:1">
+              <div style="font-size:13px;font-weight:700;color:${color}">${label}${sub}${hvem}</div>
+              <div style="font-size:13px;margin-top:2px">${e.title || e.note || ''}</div>
+              <div style="font-size:12px;color:var(--text2);margin-top:2px">${e.startTime}–${e.endTime}${e.km ? ' · ' + e.km + ' km' : ''}${e.honorar ? ' · ' + e.honorar + ' kr honorar' : ''}</div>
+            </div>
+            <button onclick="editEvent('${e.id}')" style="background:none;border:none;font-size:16px;cursor:pointer;padding:4px">✏️</button>
+          </div>`;
+        }).join('')
+    }
+  `;
+}
+
+function renderConflicts() {
+  const events = DB.events().sort((a,b) => a.date.localeCompare(b.date) || a.startTime.localeCompare(b.startTime));
+  const conflicts = [];
+  for (let i = 0; i < events.length; i++) {
+    for (let j = i+1; j < events.length; j++) {
+      const a = events[i], b = events[j];
+      if (a.date !== b.date) break;
+      const as = timeToMin(a.startTime), ae = timeToMin(a.endTime);
+      const bs = timeToMin(b.startTime), be = timeToMin(b.endTime);
+      if (as < be && ae > bs) {
+        conflicts.push({a, b});
+      }
+    }
+  }
+  const el = document.getElementById('conflicts-section');
+  if (conflicts.length === 0) { el.innerHTML = ''; return; }
+  el.innerHTML = `<div class="card-title" style="color:var(--red)">⚠️ Konflikter (${conflicts.length})</div>` +
+    conflicts.map(({a,b}) => `
+      <div class="conflict-badge">
+        <span class="icon">⚠️</span>
+        <span class="text"><strong>${formatDate(new Date(a.date+'T12:00:00'))}</strong><br>
+        "${a.title}" (${a.startTime}–${a.endTime}) overlapper med "${b.title}" (${b.startTime}–${b.endTime})</span>
+      </div>`).join('');
+}
+
+function renderToday() {
+  const today = todayStr();
+  const events = DB.events().filter(e => e.date === today).sort((a,b) => a.startTime.localeCompare(b.startTime));
+  const colorMap = { traening: '#4f8ef7', skole: '#bf5af2', ft: '#ff9f0a', arbejde: '#34c759' };
+  const el = document.getElementById('overblik-today');
+
+  const d = new Date();
+  el.innerHTML = `<div class="card-title">I dag — ${DAY_NAMES_FULL[d.getDay() === 0 ? 6 : d.getDay()-1]}, ${d.getDate()}. ${MONTHS[d.getMonth()]}</div>`;
+
+  if (events.length === 0) {
+    el.innerHTML += '<div class="empty" style="padding:16px 0">Ingen aftaler i dag 🎉</div>';
+  } else {
+    el.innerHTML += events.map(e => `
+      <div class="event-item">
+        <div class="event-color" style="background:${colorMap[e.category]}"></div>
+        <div class="event-info">
+          <div class="event-title">${e.title}</div>
+          <div class="event-time">${e.startTime}–${e.endTime}${e.who ? ' · ' + e.who : ''}</div>
+        </div>
+      </div>`).join('');
+  }
+
+  // Quick fuel summary this month
+  const mo = todayStr().slice(0,7);
+  const fuel = DB.fuel().filter(f => f.date.startsWith(mo));
+  const totalKr = fuel.reduce((s,f) => s + f.amount, 0);
+  const totalKm = fuel.reduce((s,f) => s + f.km, 0);
+  if (fuel.length > 0) {
+    el.innerHTML += `<div class="card" style="margin-top:12px">
+      <div class="card-title">⛽ Denne måned</div>
+      <div class="stats-row" style="margin-bottom:0">
+        <div class="stat-box"><div class="stat-val">${totalKr.toFixed(0)} kr</div><div class="stat-label">Brændstof</div></div>
+        <div class="stat-box"><div class="stat-val">${totalKm.toFixed(0)} km</div><div class="stat-label">Kørte km</div></div>
+      </div>
+    </div>`;
+  }
+}
+
+function renderUpcoming() {
+  const today = todayStr();
+  const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate()+1);
+  const in7 = new Date(); in7.setDate(in7.getDate()+7);
+  const events = DB.events()
+    .filter(e => e.date > today && e.date <= dateStr(in7))
+    .sort((a,b) => a.date.localeCompare(b.date) || a.startTime.localeCompare(b.startTime));
+  const colorMap = { traening: '#4f8ef7', skole: '#bf5af2', ft: '#ff9f0a', arbejde: '#34c759' };
+  const el = document.getElementById('overblik-upcoming');
+  if (events.length === 0) { el.innerHTML = ''; return; }
+  el.innerHTML = `<div class="card-title" style="margin-top:16px">Kommende 7 dage</div>` +
+    events.map(e => {
+      const d = new Date(e.date+'T12:00:00');
+      const dayLabel = `${DAY_NAMES[d.getDay() === 0 ? 6 : d.getDay()-1]} ${d.getDate()}/${d.getMonth()+1}`;
+      return `<div class="event-item">
+        <div class="event-color" style="background:${colorMap[e.category]}"></div>
+        <div class="event-info">
+          <div class="event-title">${e.title}</div>
+          <div class="event-time">${dayLabel} · ${e.startTime}–${e.endTime}${e.who ? ' · '+e.who : ''}</div>
+        </div>
+      </div>`;
+    }).join('');
+}
+
+// ===================== ARBEJDE =====================
+function saveArbejde() {
+  const date = document.getElementById('arb-date').value;
+  const title = document.getElementById('arb-title').value || 'Arbejde';
+  const start = document.getElementById('arb-start').value;
+  const end = document.getElementById('arb-end').value;
+  const type = getSelected('arb-type-row');
+  const note = document.getElementById('arb-note').value;
+  if (!date || !start || !end) { alert('Udfyld dag, start og sluttidspunkt'); return; }
+  if (timeToMin(start) >= timeToMin(end)) { alert('Slut skal være efter start'); return; }
+  const cf = hasConflict(date, timeToMin(start), timeToMin(end), editingEventId);
+  if (cf) { alert(`Konflikt med "${cf.title}" kl. ${cf.startTime}–${cf.endTime}.`); return; }
+  const honorar = type === 'Ishockeydommer' ? (parseFloat(document.getElementById('arb-honorar').value) || 0) : 0;
+  const koersel = type === 'Ishockeydommer' ? (parseFloat(document.getElementById('arb-koersel').value) || 0) : 0;
+  const entry = { category: 'arbejde', type, date, startTime: start, endTime: end, title, note, honorar, koersel };
+  if (editingEventId) {
+    DB.updateEvent(editingEventId, entry);
+    editingEventId = null;
+  } else {
+    DB.saveEvent({ id: Date.now().toString(), ...entry });
+  }
+  resetModalTitle('modal-arbejde', 'Tilføj arbejde');
+  closeModal('modal-arbejde');
+  renderArbejdeWeek();
+  if (currentView === 'overblik') renderOverblik();
+  document.getElementById('arb-title').value = '';
+  document.getElementById('arb-note').value = '';
+  document.getElementById('arb-honorar').value = '';
+  document.getElementById('arb-koersel').value = '';
+}
+
+function renderArbejdeWeek() {
+  const days = getWeekDates(currentWeekOffset);
+  const today = todayStr();
+  if (!selectedDay.arbejde) selectedDay.arbejde = days.find(d => dateStr(d) === today) ? today : dateStr(days[0]);
+  renderWeekGrid('arbejde-week-grid', 'arbejde', selectedDay.arbejde, 'selectArbejdeDay');
+  renderDayEvents('arbejde-day-events', selectedDay.arbejde, 'arbejde', '#34c759');
+}
+
+function selectArbejdeDay(ds) {
+  selectedDay.arbejde = ds;
+  renderArbejdeWeek();
+}
+
+// ===================== INDKØB =====================
+let indkoebSelectedMonth = null;
+
+function saveIndkoeb() {
+  const date = document.getElementById('ik-date').value;
+  const amount = parseFloat(document.getElementById('ik-amount').value);
+  const note = document.getElementById('ik-note').value;
+  if (!date || !amount) { alert('Udfyld dato og beløb'); return; }
+  const entry = { date, amount, note };
+  if (editingIndkoebId) {
+    DB.updateIndkoeb(editingIndkoebId, entry);
+    editingIndkoebId = null;
+  } else {
+    DB.saveIndkoeb({ id: Date.now().toString(), ...entry });
+  }
+  resetModalTitle('modal-indkoeb', 'Tilføj indkøb');
+  closeModal('modal-indkoeb');
+  renderIndkoeb();
+  renderTracker();
+}
+
+function editIndkoeb(id) {
+  const e = DB.indkoeb().find(x => x.id === id);
+  if (!e) return;
+  editingIndkoebId = id;
+  document.getElementById('ik-date').value = e.date;
+  document.getElementById('ik-amount').value = e.amount;
+  document.getElementById('ik-note').value = e.note || '';
+  document.querySelector('#modal-indkoeb h2').textContent = 'Redigér indkøb';
+  document.getElementById('modal-indkoeb').classList.add('open');
+}
+
+function deleteIndkoeb(id) {
+  if (confirm('Slet indkøb?')) { DB.deleteIndkoeb(id); renderIndkoeb(); renderTracker(); }
+}
+
+function selectIndkoebMonth(m) { indkoebSelectedMonth = m; renderIndkoeb(); }
+
+function saveIndkoebMaal() {
+  const mo = indkoebSelectedMonth || todayStr().slice(0,7);
+  const val = parseFloat(document.getElementById('ik-maal-input').value);
+  if (!val || val <= 0) { alert('Indtast et gyldigt beløb'); return; }
+  DB.setIndkoebMaal(mo, val);
+  renderIndkoeb();
+  renderTracker();
+}
+
+function renderIndkoeb() {
+  const entries = DB.indkoeb().sort((a,b) => b.date.localeCompare(a.date));
+  const months = [...new Set(entries.map(e => e.date.slice(0,7)))];
+  const curMo = todayStr().slice(0,7);
+  if (!months.includes(curMo)) months.unshift(curMo);
+  months.sort().reverse();
+  if (!indkoebSelectedMonth || !months.includes(indkoebSelectedMonth)) indkoebSelectedMonth = curMo;
+
+  // Måneds-tabs
+  document.getElementById('indkoeb-month-tabs').innerHTML = months.map(m => {
+    const [y, mo] = m.split('-');
+    return `<button class="month-tab ${m===indkoebSelectedMonth?'active':''}" onclick="selectIndkoebMonth('${m}')">${MONTHS[parseInt(mo)-1].slice(0,3)} ${y}</button>`;
+  }).join('');
+
+  const mo = indkoebSelectedMonth;
+  const filtered = entries.filter(e => e.date.startsWith(mo));
+  const total = filtered.reduce((s,e) => s + e.amount, 0);
+  const maal = DB.getIndkoebMaal(mo);
+  const tilbage = Math.max(0, maal - total);
+  const pct = maal > 0 ? Math.min(100, Math.round(total / maal * 100)) : 0;
+  const overBudget = maal > 0 && total > maal;
+  const barColor = overBudget ? 'var(--red)' : pct > 80 ? 'var(--orange)' : 'var(--green)';
+
+  // Mål-sektion
+  document.getElementById('indkoeb-goal-section').innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:${maal>0?12:10}px">
+      <span style="font-weight:700">Månedsmål</span>
+      <span style="font-size:18px;font-weight:800;color:${overBudget?'var(--red)':'var(--text)'}">${total.toFixed(0)} kr${maal>0?' / '+maal+' kr':''}</span>
+    </div>
+    ${maal > 0 ? `
+      <div style="height:10px;background:var(--bg3);border-radius:5px;margin-bottom:8px;overflow:hidden">
+        <div style="height:10px;background:${barColor};border-radius:5px;width:${pct}%;transition:width 0.4s"></div>
+      </div>
+      <div style="font-size:13px;color:${overBudget?'var(--red)':'var(--text2)'}">
+        ${overBudget ? `⚠️ ${(total-maal).toFixed(0)} kr over budget` : `${tilbage.toFixed(0)} kr tilbage`}
+      </div>` : `<div style="font-size:13px;color:var(--text2)">Sæt et månedsmål under 🎯 Mål</div>`}
+  `;
+
+  // Summary stats
+  document.getElementById('indkoeb-summary').innerHTML = `
+    <div class="stats-row" style="margin-bottom:12px">
+      <div class="stat-box"><div class="stat-val">${total.toFixed(0)} kr</div><div class="stat-label">Brugt denne måned</div></div>
+      <div class="stat-box"><div class="stat-val">${filtered.length}</div><div class="stat-label">Indkøb</div></div>
+    </div>`;
+
+  // Liste
+  const listEl = document.getElementById('indkoeb-list');
+  if (filtered.length === 0) { listEl.innerHTML = '<div class="empty">Ingen indkøb denne måned</div>'; return; }
+  listEl.innerHTML = filtered.map(e => `
+    <div class="fuel-entry">
+      <div>
+        <div class="fuel-date">${formatDate(new Date(e.date+'T12:00:00'))}</div>
+        <div style="font-weight:600;margin-top:2px">${e.amount.toFixed(0)} kr${e.note?' · <span style="color:var(--text2);font-weight:400">'+e.note+'</span>':''}</div>
+      </div>
+      <div style="display:flex;gap:4px;align-items:center">
+        <button onclick="editIndkoeb('${e.id}')" style="background:none;border:none;font-size:16px;cursor:pointer;padding:4px">✏️</button>
+        <button onclick="deleteIndkoeb('${e.id}')" style="background:none;border:none;color:var(--text2);font-size:20px;cursor:pointer;padding:4px">🗑</button>
+      </div>
+    </div>`).join('');
+}
+
+// ===================== TRACKER =====================
+const ELEKTRIKER_RATE = 232;
+
+function getLonPeriod() {
+  const today = new Date();
+  const d = today.getDate();
+  let start, end;
+  if (d < 20) {
+    start = new Date(today.getFullYear(), today.getMonth() - 1, 20);
+    end   = new Date(today.getFullYear(), today.getMonth(), 20);
+  } else {
+    start = new Date(today.getFullYear(), today.getMonth(), 20);
+    end   = new Date(today.getFullYear(), today.getMonth() + 1, 20);
+  }
+  const payDate = new Date(end.getFullYear(), end.getMonth() + 1, 1);
+  return { start, end, payDate, key: dateStr(start) };
+}
+
+function getMonthRange() {
+  const today = new Date();
+  const start = dateStr(new Date(today.getFullYear(), today.getMonth(), 1));
+  const end   = dateStr(new Date(today.getFullYear(), today.getMonth() + 1, 0));
+  return { start, end };
+}
+
+function getDurationHours(startTime, endTime) {
+  if (!startTime || !endTime) return 0;
+  const mins = timeToMin(endTime) - timeToMin(startTime);
+  return Math.max(0, mins / 60);
+}
+
+function fmtH(h) {
+  const totalMin = Math.round(h * 60);
+  if (totalMin === 0) return '0 min';
+  const hours = Math.floor(totalMin / 60);
+  const mins = totalMin % 60;
+  if (hours === 0) return `${mins} min`;
+  if (mins === 0) return `${hours}t`;
+  return `${hours}t ${mins} min`;
+}
+function fmtKr(kr) { return `${Math.round(kr).toLocaleString('da-DK')} kr`; }
+
+function renderTracker() {
+  const el = document.getElementById('overblik-tracker');
+  if (!el) return;
+
+  const { start: mStart, end: mEnd } = getMonthRange();
+  const events = DB.events();
+  const lon = getLonPeriod();
+  const lonPaid = JSON.parse(localStorage.getItem('lonPaid_' + lon.key) || 'false');
+
+  // --- SKOLE (denne måned) ---
+  const skoleEv = events.filter(e => e.category === 'skole' && e.date >= mStart && e.date <= mEnd);
+  const skoleTotal = skoleEv.reduce((s, e) => s + getDurationHours(e.startTime, e.endTime), 0);
+  const skoleByType = { 'forelæsning': 0, 'lektier': 0, 'opgave': 0 };
+  skoleEv.forEach(e => {
+    const t = (e.type || '').toLowerCase();
+    if (skoleByType.hasOwnProperty(t)) skoleByType[t] += getDurationHours(e.startTime, e.endTime);
+  });
+
+  // --- TRÆNING (denne måned) ---
+  const treeningEv = events.filter(e => e.category === 'traening' && e.date >= mStart && e.date <= mEnd);
+  const loebEv = treeningEv.filter(e => e.type === 'run');
+  const hockeyEv = treeningEv.filter(e => e.type === 'hockey');
+  const loebHours = loebEv.reduce((s, e) => s + getDurationHours(e.startTime, e.endTime), 0);
+  const hockeyHours = hockeyEv.reduce((s, e) => s + getDurationHours(e.startTime, e.endTime), 0);
+  const treeningTotal = treeningEv.reduce((s, e) => s + getDurationHours(e.startTime, e.endTime), 0);
+  // Gennemsnitlig km og pace for løb
+  const loebAvgKm = loebEv.length > 0 ? loebEv.reduce((s,e) => s + (parseFloat(e.km)||0), 0) / loebEv.length : 0;
+  const loebTotalKm = loebEv.reduce((s,e) => s + (parseFloat(e.km)||0), 0);
+
+  // --- FT (denne måned) ---
+  const ftEv = events.filter(e => e.category === 'ft' && e.date >= mStart && e.date <= mEnd);
+  const ftHours = ftEv.reduce((s, e) => s + getDurationHours(e.startTime, e.endTime), 0);
+  const FT_HVEM = ['Familie', 'Caroline', 'Venner', 'Andet'];
+  const ftByHvem = {};
+  FT_HVEM.forEach(h => {
+    const sub = ftEv.filter(e => e.who === h);
+    ftByHvem[h] = { count: sub.length, hours: sub.reduce((s,e) => s + getDurationHours(e.startTime, e.endTime), 0) };
+  });
+
+  // --- ELEKTRIKER (lønperiode) ---
+  const lonStart = dateStr(lon.start), lonEnd = dateStr(lon.end);
+  const elEv = events.filter(e => e.category === 'arbejde' && e.type === 'Elektriker' && e.date >= lonStart && e.date < lonEnd);
+  const elHours = elEv.reduce((s, e) => s + getDurationHours(e.startTime, e.endTime), 0);
+  const elPay = elHours * ELEKTRIKER_RATE;
+
+  // --- ISHOCKEYDOMMER (denne måned) ---
+  const domEv = events.filter(e => e.category === 'arbejde' && e.type === 'Ishockeydommer' && e.date >= mStart && e.date <= mEnd);
+  const domHonorar = domEv.reduce((s, e) => s + (e.honorar || 0), 0);
+  const domKoersel = domEv.reduce((s, e) => s + (e.koersel || 0), 0);
+
+  // Progress bar
+  const bar = (v, max, color) => `<div style="height:5px;background:var(--bg3);border-radius:3px;margin-top:5px">
+    <div style="height:5px;background:${color};border-radius:3px;width:${max>0?Math.min(100,Math.round(v/max*100)):0}%"></div></div>`;
+
+  const moLabel = `${MONTHS[new Date().getMonth()]} ${new Date().getFullYear()}`;
+  const lonLabel = `${lon.start.getDate()}. ${MONTHS[lon.start.getMonth()].slice(0,3)} – ${lon.end.getDate()}. ${MONTHS[lon.end.getMonth()].slice(0,3)}`;
+  const payLabel = `1. ${MONTHS[lon.payDate.getMonth()]} ${lon.payDate.getFullYear()}`;
+
+  el.innerHTML = `
+    <!-- INDKØB KORT -->
+    ${(() => {
+      const mo = todayStr().slice(0,7);
+      const ikTotal = DB.indkoeb().filter(e => e.date.startsWith(mo)).reduce((s,e) => s+e.amount, 0);
+      const ikMaal = DB.getIndkoebMaal(mo);
+      const ikPct = ikMaal > 0 ? Math.min(100, Math.round(ikTotal/ikMaal*100)) : 0;
+      const ikOver = ikMaal > 0 && ikTotal > ikMaal;
+      const ikBarColor = ikOver ? 'var(--red)' : ikPct > 80 ? 'var(--orange)' : 'var(--green)';
+      const ikTilbage = Math.max(0, ikMaal - ikTotal);
+      return `<div class="card" style="margin-bottom:10px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:${ikMaal>0?10:0}px">
+          <span style="font-weight:700">🛒 Indkøb</span>
+          <span style="font-size:18px;font-weight:800;color:${ikOver?'var(--red)':'var(--text)'}">${ikTotal.toFixed(0)} kr${ikMaal>0?' / '+ikMaal+' kr':''}</span>
+        </div>
+        ${ikMaal > 0 ? `
+          <div style="height:8px;background:var(--bg3);border-radius:4px;margin-bottom:6px;overflow:hidden">
+            <div style="height:8px;background:${ikBarColor};border-radius:4px;width:${ikPct}%"></div>
+          </div>
+          <div style="font-size:12px;color:${ikOver?'var(--red)':'var(--text2)'}">
+            ${ikOver ? `⚠️ ${(ikTotal-ikMaal).toFixed(0)} kr over budget` : `${ikTilbage.toFixed(0)} kr tilbage af ${ikMaal} kr`}
+          </div>` : `<div style="font-size:12px;color:var(--text2)">Intet månedsmål sat</div>`}
+      </div>`;
+    })()}
+
+    <div class="card-title">📊 Statistik — ${moLabel}</div>
+
+    <div class="card" style="margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:${skoleTotal>0?10:0}px">
+        <span style="font-weight:700">📚 Skole</span>
+        <span style="font-size:20px;font-weight:800;color:var(--purple)">${fmtH(skoleTotal)}</span>
+      </div>
+      ${skoleTotal > 0 ? `<div style="display:flex;flex-direction:column;gap:8px;font-size:13px">
+        <div><div style="display:flex;justify-content:space-between"><span style="color:var(--text2)">📖 Forelæsning</span><span style="font-weight:600">${fmtH(skoleByType['forelæsning'])}</span></div>${bar(skoleByType['forelæsning'],skoleTotal,'#bf5af2')}</div>
+        <div><div style="display:flex;justify-content:space-between"><span style="color:var(--text2)">✏️ Lektier</span><span style="font-weight:600">${fmtH(skoleByType['lektier'])}</span></div>${bar(skoleByType['lektier'],skoleTotal,'#a855f7')}</div>
+        <div><div style="display:flex;justify-content:space-between"><span style="color:var(--text2)">📝 Opgave</span><span style="font-weight:600">${fmtH(skoleByType['opgave'])}</span></div>${bar(skoleByType['opgave'],skoleTotal,'#7c3aed')}</div>
+      </div>` : `<div style="font-size:13px;color:var(--text2)">Ingen skoletimer denne måned</div>`}
+    </div>
+
+    <div class="card" style="margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:${treeningTotal>0?10:0}px">
+        <span style="font-weight:700">🏃 Træning</span>
+        <span style="font-size:20px;font-weight:800;color:var(--accent)">${fmtH(treeningTotal)}</span>
+      </div>
+      ${treeningTotal > 0 ? `<div style="display:flex;flex-direction:column;gap:8px;font-size:13px">
+        <div>
+          <div style="display:flex;justify-content:space-between">
+            <span style="color:var(--text2)">🏃 Løb</span>
+            <span style="font-weight:600">${loebEv.length} gange · ${fmtH(loebHours)}${loebTotalKm > 0 ? ' · ' + loebTotalKm.toFixed(1) + ' km' : ''}</span>
+          </div>
+          ${bar(loebHours, treeningTotal, '#4f8ef7')}
+        </div>
+        <div>
+          <div style="display:flex;justify-content:space-between">
+            <span style="color:var(--text2)">🏒 Ishockey</span>
+            <span style="font-weight:600">${hockeyEv.length} gange · ${fmtH(hockeyHours)}</span>
+          </div>
+          ${bar(hockeyHours, treeningTotal, '#30b0c7')}
+        </div>
+        ${treeningEv.length - loebEv.length - hockeyEv.length > 0 ? `<div>
+          <div style="display:flex;justify-content:space-between">
+            <span style="color:var(--text2)">💪 Andet</span>
+            <span style="font-weight:600">${treeningEv.length - loebEv.length - hockeyEv.length} gange · ${fmtH(treeningTotal - loebHours - hockeyHours)}</span>
+          </div>
+          ${bar(treeningTotal - loebHours - hockeyHours, treeningTotal, '#8e8e93')}
+        </div>` : ''}
+      </div>` : `<div style="font-size:13px;color:var(--text2)">Ingen træning denne måned</div>`}
+    </div>
+
+    <div class="card" style="margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:${ftEv.length>0?10:0}px">
+        <span style="font-weight:700">🎉 Free Time</span>
+        <span style="font-size:20px;font-weight:800;color:var(--orange)">${ftEv.length} aftaler · ${fmtH(ftHours)}</span>
+      </div>
+      ${ftEv.length > 0 ? `<div style="display:flex;flex-direction:column;gap:8px;font-size:13px">
+        ${FT_HVEM.map(h => ftByHvem[h].count > 0 ? `<div>
+          <div style="display:flex;justify-content:space-between">
+            <span style="color:var(--text2)">${h}</span>
+            <span style="font-weight:600">${ftByHvem[h].count} × · ${fmtH(ftByHvem[h].hours)}</span>
+          </div>
+          ${bar(ftByHvem[h].hours, ftHours, '#ff9f0a')}
+        </div>` : '').join('')}
+      </div>` : `<div style="font-size:13px;color:var(--text2)">Ingen FT-aftaler denne måned</div>`}
+    </div>
+
+    ${domEv.length > 0 ? `
+    <div class="card" style="margin-bottom:10px">
+      <div style="font-weight:700;margin-bottom:10px">🏒 Ishockeydommer — ${moLabel}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;text-align:center">
+        <div style="background:var(--bg3);border-radius:var(--radius-sm);padding:10px">
+          <div style="font-size:22px;font-weight:800;color:var(--accent)">${domEv.length}</div>
+          <div style="font-size:11px;color:var(--text2)">kampe</div>
+        </div>
+        <div style="background:var(--bg3);border-radius:var(--radius-sm);padding:10px">
+          <div style="font-size:16px;font-weight:800;color:var(--green)">${fmtKr(domHonorar)}</div>
+          <div style="font-size:11px;color:var(--text2)">honorar</div>
+        </div>
+        <div style="background:var(--bg3);border-radius:var(--radius-sm);padding:10px">
+          <div style="font-size:16px;font-weight:800;color:var(--text2)">${fmtKr(domKoersel)}</div>
+          <div style="font-size:11px;color:var(--text2)">kørsel</div>
+        </div>
+      </div>
+    </div>` : ''}
+
+    <div class="card" style="margin-bottom:10px">
+      <div style="font-weight:700;margin-bottom:4px">💰 Lønperiode</div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:12px">${lonLabel} · ⚡ Elektriker</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+        <div class="stat-box">
+          <div class="stat-val" style="color:var(--green)">${fmtH(elHours)}</div>
+          <div class="stat-label">Timer registreret</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-val" style="color:var(--green)">${fmtKr(elPay)}</div>
+          <div class="stat-label">Forventet løn</div>
+        </div>
+      </div>
+      <div onclick="toggleLonPaid('${lon.key}')" style="display:flex;align-items:center;gap:12px;padding:12px;background:var(--bg3);border-radius:var(--radius-sm);cursor:pointer">
+        <div style="width:26px;height:26px;border-radius:6px;border:2px solid ${lonPaid?'var(--green)':'var(--border)'};background:${lonPaid?'var(--green)':'transparent'};display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.2s">
+          ${lonPaid?'<span style="color:#fff;font-size:15px;font-weight:700">✓</span>':''}
+        </div>
+        <div>
+          <div style="font-size:14px;font-weight:600">Udbetalt d. ${payLabel}</div>
+          <div style="font-size:12px;color:${lonPaid?'var(--green)':'var(--text2)'}">${lonPaid?'✓ Bekræftet':'Endnu ikke markeret'}</div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function toggleLonPaid(key) {
+  const cur = JSON.parse(localStorage.getItem('lonPaid_' + key) || 'false');
+  localStorage.setItem('lonPaid_' + key, JSON.stringify(!cur));
+  renderTracker();
+}
+
+// ===================== EKSPORT / IMPORT =====================
+function exportData() {
+  const data = {
+    version: 3,
+    exportedAt: new Date().toISOString(),
+    fuel: DB.fuel(),
+    events: DB.events(),
+    indkoeb: DB.indkoeb(),
+    todos: DB.todos(),
+    habitDefs: DB.habitDefs(),
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const dato = new Date().toISOString().slice(0,10);
+  a.href = url;
+  a.download = `MinApp_data_${dato}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function importData(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (!data.version || !Array.isArray(data.fuel) || !Array.isArray(data.events)) {
+        document.getElementById('import-status').textContent = '❌ Ugyldigt filformat.';
+        return;
+      }
+      DB.set('fuel', data.fuel);
+      DB.set('events', data.events);
+      if (Array.isArray(data.indkoeb)) DB.set('indkoeb', data.indkoeb);
+      if (Array.isArray(data.todos)) DB.set('todos', data.todos);
+      if (Array.isArray(data.habitDefs)) DB.set('habit_defs', data.habitDefs);
+      document.getElementById('import-status').textContent = `✅ Data indlæst — ${data.fuel.length} tankninger, ${data.events.length} aftaler, ${(data.indkoeb||[]).length} indkøb, ${(data.todos||[]).length} todos.`;
+      renderOverblik();
+    } catch {
+      document.getElementById('import-status').textContent = '❌ Kunne ikke læse filen.';
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+// ===================== TODOS =====================
+const PROJECT_COLORS = { Inbox:'#9a9a9a', Personlig:'#4f8ef7', Skole:'#bf5af2', Arbejde:'#34c759' };
+const PRIORITY_COLORS = { 1:'#ff453a', 2:'#ff9f0a', 3:'#4f8ef7', 4:'#9a9a9a' };
+let editingTodoId = null;
+let todoFilter = 'Alle';
+
+function openTodoModal(id = null) {
+  editingTodoId = id;
+  if (id) {
+    const t = DB.todos().find(x => x.id === id);
+    if (!t) return;
+    document.getElementById('td-title').value = t.title;
+    document.getElementById('td-note').value = t.note || '';
+    document.getElementById('td-date').value = t.dueDate || '';
+    document.getElementById('td-priority').value = t.priority || 4;
+    setTagByVal('td-project-row', t.project || 'Inbox', PROJECT_COLORS[t.project] || '#9a9a9a');
+    document.querySelector('#modal-todo h2').textContent = 'Redigér opgave';
+  } else {
+    document.getElementById('td-title').value = document.getElementById('todo-quick-input').value || '';
+    document.getElementById('td-note').value = '';
+    document.getElementById('td-date').value = '';
+    document.getElementById('td-priority').value = 4;
+    setTagByVal('td-project-row', 'Inbox', '#9a9a9a');
+    document.querySelector('#modal-todo h2').textContent = 'Tilføj opgave';
+  }
+  openModal('modal-todo');
+}
+
+function quickAddTodo() {
+  const inp = document.getElementById('todo-quick-input');
+  const title = inp.value.trim();
+  if (!title) return;
+  DB.saveTodo({ id: Date.now().toString(), title, note:'', dueDate: todayStr(), priority:4, project:'Inbox', completed:false, completedAt:null });
+  inp.value = '';
+  renderTodos();
+}
+
+function saveTodo() {
+  const title = document.getElementById('td-title').value.trim();
+  if (!title) { alert('Skriv en titel'); return; }
+  const entry = {
+    title,
+    note: document.getElementById('td-note').value,
+    dueDate: document.getElementById('td-date').value || null,
+    priority: parseInt(document.getElementById('td-priority').value),
+    project: getSelected('td-project-row') || 'Inbox',
+    completed: false, completedAt: null
+  };
+  if (editingTodoId) {
+    DB.updateTodo(editingTodoId, entry);
+    editingTodoId = null;
+  } else {
+    DB.saveTodo({ id: Date.now().toString(), ...entry });
+  }
+  document.getElementById('todo-quick-input').value = '';
+  closeModal('modal-todo');
+  renderTodos();
+}
+
+function toggleTodo(id) {
+  const t = DB.todos().find(x => x.id === id);
+  if (!t) return;
+  DB.updateTodo(id, { completed: !t.completed, completedAt: !t.completed ? new Date().toISOString() : null });
+  renderTodos();
+  if (currentView === 'overblik') renderOverblik();
+}
+
+function deleteTodoItem(id) {
+  if (confirm('Slet opgave?')) { DB.deleteTodo(id); renderTodos(); }
+}
+
+function toggleTodoDetail(id) {
+  const el = document.getElementById('td-detail-' + id);
+  if (el) el.classList.toggle('open');
+}
+
+function dueDateLabel(ds) {
+  if (!ds) return null;
+  const today = todayStr();
+  const tomorrow = dateStr(new Date(Date.now() + 86400000));
+  if (ds < today) return { text: 'Overskredet', cls: 'overdue' };
+  if (ds === today) return { text: 'I dag', cls: 'today' };
+  if (ds === tomorrow) return { text: 'I morgen', cls: 'soon' };
+  const d = new Date(ds + 'T12:00:00');
+  return { text: `${d.getDate()}. ${MONTHS[d.getMonth()].slice(0,3)}`, cls: 'later' };
+}
+
+function renderTodos() {
+  const projects = ['Alle', ...Object.keys(PROJECT_COLORS)];
+  const filterEl = document.getElementById('todo-project-filter');
+  filterEl.innerHTML = projects.map(p => `
+    <button onclick="todoFilter='${p}';renderTodos()" style="background:${todoFilter===p?'var(--accent)':'var(--bg3)'};color:${todoFilter===p?'#fff':'var(--text2)'};border:none;padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap">${p}</button>
+  `).join('');
+
+  let todos = DB.todos().filter(t => !t.completed);
+  if (todoFilter !== 'Alle') todos = todos.filter(t => t.project === todoFilter);
+  const completed = DB.todos().filter(t => t.completed).slice(0, 10);
+
+  const today = todayStr();
+  const tomorrow = dateStr(new Date(Date.now() + 86400000));
+  const in7 = dateStr(new Date(Date.now() + 7 * 86400000));
+
+  const sections = [
+    { key:'overdue', label:'⚠️ Overskredet', items: todos.filter(t => t.dueDate && t.dueDate < today).sort((a,b)=>a.dueDate.localeCompare(b.dueDate)) },
+    { key:'today', label:'I dag', items: todos.filter(t => t.dueDate === today) },
+    { key:'tomorrow', label:'I morgen', items: todos.filter(t => t.dueDate === tomorrow) },
+    { key:'week', label:'Denne uge', items: todos.filter(t => t.dueDate && t.dueDate > tomorrow && t.dueDate <= in7) },
+    { key:'later', label:'Senere', items: todos.filter(t => t.dueDate && t.dueDate > in7) },
+    { key:'none', label:'Ingen dato', items: todos.filter(t => !t.dueDate) },
+  ];
+
+  function todoHTML(t) {
+    const pc = PROJECT_COLORS[t.project] || '#9a9a9a';
+    const prio = t.priority || 4;
+    const due = dueDateLabel(t.dueDate);
+    return `<div class="todo-item" id="todo-${t.id}">
+      <div class="todo-check p${prio}" onclick="toggleTodo('${t.id}')"></div>
+      <div class="todo-body" onclick="toggleTodoDetail('${t.id}')">
+        <div class="todo-title">${t.title}</div>
+        <div class="todo-meta">
+          ${t.project !== 'Inbox' ? `<span class="project-badge" style="background:${hexToRgba(pc,0.15)};color:${pc}">${t.project}</span>` : ''}
+          ${due ? `<span class="todo-due ${due.cls}">📅 ${due.text}</span>` : ''}
+        </div>
+        <div class="todo-detail" id="td-detail-${t.id}">
+          ${t.note ? `<div style="font-size:13px;color:var(--text2);margin-bottom:8px">${t.note}</div>` : ''}
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-ghost btn-sm" onclick="openTodoModal('${t.id}');event.stopPropagation()">✏️ Redigér</button>
+            <button class="btn btn-danger btn-sm" onclick="deleteTodoItem('${t.id}');event.stopPropagation()">🗑 Slet</button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  const listEl = document.getElementById('todo-list');
+  let html = '';
+  sections.forEach(s => {
+    if (s.items.length === 0) return;
+    html += `<div class="todo-section-hdr">${s.label} (${s.items.length})</div>`;
+    html += s.items.map(todoHTML).join('');
+  });
+  if (todos.length === 0) html = '<div class="empty" style="padding:30px 0">Ingen opgaver 🎉<br><span style="font-size:13px">Tilføj en opgave ovenfor</span></div>';
+  if (completed.length > 0) {
+    html += `<div class="todo-section-hdr" onclick="document.getElementById('done-list').style.display=document.getElementById('done-list').style.display==='none'?'block':'none'" style="cursor:pointer">✓ Fuldført (${completed.length}) ▾</div>
+    <div id="done-list" style="display:none">${completed.map(t => `
+      <div class="todo-item" style="opacity:0.5">
+        <div class="todo-check done" onclick="toggleTodo('${t.id}')">✓</div>
+        <div class="todo-body"><div class="todo-title done">${t.title}</div></div>
+        <button onclick="deleteTodoItem('${t.id}')" style="background:none;border:none;color:var(--text2);font-size:16px;cursor:pointer">✕</button>
+      </div>`).join('')}</div>`;
+  }
+  listEl.innerHTML = html;
+}
+
+// ===================== HABITS =====================
+function saveHabit() {
+  const name = document.getElementById('hb-name').value.trim();
+  const icon = document.getElementById('hb-icon').value.trim() || '⭐';
+  const color = getSelected('hb-color-row') || '#4f8ef7';
+  if (!name) { alert('Skriv et navn'); return; }
+  DB.saveHabitDef({ id: Date.now().toString(), name, icon, color });
+  document.getElementById('hb-name').value = '';
+  document.getElementById('hb-icon').value = '';
+  closeModal('modal-habit');
+  renderHabits();
+}
+
+function deleteHabit(id) {
+  if (confirm('Slet vane?')) { DB.deleteHabitDef(id); renderHabits(); }
+}
+
+function toggleHabit(date, id) {
+  DB.toggleHabitDone(date, id);
+  renderHabits();
+  if (currentView === 'overblik') renderOverblik();
+}
+
+function getHabitStreak(id) {
+  let streak = 0;
+  const d = new Date();
+  for (let i = 0; i < 365; i++) {
+    const ds = dateStr(d);
+    const done = DB.getHabitDone(ds);
+    if (done.includes(id)) { streak++; d.setDate(d.getDate() - 1); }
+    else break;
+  }
+  return streak;
+}
+
+function renderHabits() {
+  const habits = DB.habitDefs();
+  const today = todayStr();
+  const todayDone = DB.getHabitDone(today);
+
+  const last7 = Array.from({length:7}, (_,i) => {
+    const d = new Date(); d.setDate(d.getDate() - 6 + i);
+    return dateStr(d);
+  });
+  const dayLabels = ['M','T','O','T','F','L','S'];
+  const todayIdx = (new Date().getDay() + 6) % 7;
+
+  const el = document.getElementById('habits-today');
+  const weekEl = document.getElementById('habits-week');
+  const weekCard = document.getElementById('habits-week-card');
+
+  if (habits.length === 0) {
+    el.innerHTML = '<div class="empty">Ingen vaner endnu<br><span style="font-size:13px">Tilføj din første vane ovenfor</span></div>';
+    weekCard.style.display = 'none';
+    return;
+  }
+
+  el.innerHTML = habits.map(h => {
+    const done = todayDone.includes(h.id);
+    const streak = getHabitStreak(h.id);
+    const dots = last7.map((ds, i) => {
+      const isDone = DB.getHabitDone(ds).includes(h.id);
+      const isToday = ds === today;
+      return `<div class="habit-dot" style="background:${isDone ? h.color : 'var(--bg3)'};${isToday?'outline:2px solid '+h.color+';outline-offset:1px':''}"></div>`;
+    }).join('');
+    return `<div class="habit-item">
+      <button class="habit-btn ${done?'done':''}" onclick="toggleHabit('${today}','${h.id}')"
+        style="${done ? 'background:'+h.color : 'border-color:'+h.color}">
+        ${done ? '✓' : h.icon}
+      </button>
+      <div class="habit-info">
+        <div class="habit-name">${h.icon} ${h.name}</div>
+        <div class="habit-streak">${streak > 0 ? '🔥 ' + streak + ' dages streak' : 'Ingen streak endnu'}</div>
+        <div class="habit-week">${dots}</div>
+      </div>
+      <button onclick="deleteHabit('${h.id}')" style="background:none;border:none;color:var(--text2);font-size:18px;cursor:pointer;padding:4px">✕</button>
+    </div>`;
+  }).join('');
+
+  weekCard.style.display = 'block';
+  const completedToday = todayDone.filter(id => habits.find(h => h.id === id)).length;
+  weekEl.innerHTML = `<div style="text-align:center;font-size:28px;font-weight:800;color:var(--green)">${completedToday}/${habits.length}</div>
+    <div style="text-align:center;font-size:13px;color:var(--text2);margin-bottom:12px">fuldført i dag</div>
+    <div style="height:6px;background:var(--bg3);border-radius:3px;overflow:hidden">
+      <div style="height:6px;background:var(--green);border-radius:3px;width:${habits.length>0?Math.round(completedToday/habits.length*100):0}%"></div>
+    </div>`;
+}
+
+// ===================== MÅL =====================
+function renderMaal() {
+  const mo = todayStr().slice(0,7);
+  const [y, m] = mo.split('-');
+  document.getElementById('maal-month-selector').textContent = `${MONTHS[parseInt(m)-1]} ${y}`;
+
+  const maal = DB.getMaal(mo);
+  const { start: mStart, end: mEnd } = getMonthRange();
+  const events = DB.events();
+
+  const trSessions = events.filter(e => e.category==='traening' && e.date>=mStart && e.date<=mEnd).length;
+  const loebKm = events.filter(e => e.category==='traening' && e.type==='run' && e.date>=mStart && e.date<=mEnd).reduce((s,e) => s+(e.details?.km||0), 0);
+  const skoleTimer = events.filter(e => e.category==='skole' && e.date>=mStart && e.date<=mEnd).reduce((s,e) => s+getDurationHours(e.startTime,e.endTime), 0);
+  const indkoebTotal = DB.indkoeb().filter(e => e.date.startsWith(mo)).reduce((s,e) => s+e.amount, 0);
+  const braendstofTotal = DB.fuel().filter(e => e.date.startsWith(mo)).reduce((s,e) => s+e.amount, 0);
+
+  function maalCard(icon, label, actual, key, unit, isMax, goalOverride) {
+    const goal = goalOverride !== undefined ? goalOverride : (maal[key] || 0);
+    const pct = goal > 0 ? Math.min(100, Math.round(actual/goal*100)) : 0;
+    const over = goal > 0 && actual > goal;
+    const barColor = isMax ? (over?'var(--red)':pct>80?'var(--orange)':'var(--green)') : (pct>=100?'var(--green)':pct>50?'var(--accent)':'var(--orange)');
+    const actualFmt = unit==='kr' ? Math.round(actual).toLocaleString('da-DK')+' kr' : unit==='t' ? fmtH(actual) : actual.toFixed(1)+' '+unit;
+    const goalFmt = unit==='kr' ? goal.toLocaleString('da-DK')+' kr' : unit==='t' ? fmtH(goal) : goal+' '+unit;
+    return `<div class="maal-card">
+      <div class="maal-row">
+        <span style="font-weight:700">${icon} ${label}</span>
+        <span style="font-size:18px;font-weight:800;color:${goal>0?(over&&isMax?'var(--red)':'var(--text)'):'var(--text2)'}">${actualFmt}${goal>0?' / '+goalFmt:''}</span>
+      </div>
+      ${goal>0?`<div class="maal-bar-bg"><div class="maal-bar-fill" style="width:${pct}%;background:${barColor}"></div></div>
+      <div class="maal-sub">${isMax?(over?'⚠️ '+(actual-goal).toFixed(0)+' '+unit+' over':'✓ '+(goal-actual).toFixed(0)+' '+unit+' tilbage'):pct+'% af mål'}</div>`:'<div class="maal-sub">Intet mål sat</div>'}
+      <div class="maal-input-row">
+        <input type="number" id="maal-${key}" placeholder="${goal>0?goalFmt:'Sæt mål...'}" step="0.1">
+        <button class="btn btn-primary btn-sm" onclick="saveMaalGoal('${key}','${mo}')">Gem</button>
+      </div>
+    </div>`;
+  }
+
+  document.getElementById('maal-content').innerHTML =
+    maalCard('🏒','Træning',trSessions,'traening','sessioner',false) +
+    maalCard('🏃','Løb',loebKm,'loebKm','km',false) +
+    maalCard('📚','Skoletimer',skoleTimer,'skoleTimer','t',false) +
+    maalCard('🛒','Indkøb max',indkoebTotal,'indkoebMax','kr',true, DB.getIndkoebMaal(mo)) +
+    maalCard('⛽','Brændstof max',braendstofTotal,'braendstofMax','kr',true);
+}
+
+function saveMaalGoal(key, mo) {
+  const val = parseFloat(document.getElementById('maal-'+key).value);
+  if (!val || val <= 0) return;
+  if (key === 'indkoebMax') {
+    DB.setIndkoebMaal(mo, val);
+  } else {
+    const cur = DB.getMaal(mo);
+    cur[key] = val;
+    DB.setMaal(mo, cur);
+  }
+  renderMaal();
+  if (key === 'indkoebMax') renderIndkoeb();
+}
+
+// ===================== ØKONOMI =====================
+let okoSelectedMonth = null;
+
+function renderOkonomi() {
+  const allMonths = new Set();
+  DB.events().forEach(e => allMonths.add(e.date.slice(0,7)));
+  DB.fuel().forEach(e => allMonths.add(e.date.slice(0,7)));
+  DB.indkoeb().forEach(e => allMonths.add(e.date.slice(0,7)));
+  const months = [...allMonths].sort().reverse();
+  const curMo = todayStr().slice(0,7);
+  if (!months.includes(curMo)) months.unshift(curMo);
+  if (!okoSelectedMonth || !months.includes(okoSelectedMonth)) okoSelectedMonth = curMo;
+
+  document.getElementById('oko-month-tabs').innerHTML = months.slice(0,6).map(m => {
+    const [y,mo] = m.split('-');
+    return `<button class="month-tab ${m===okoSelectedMonth?'active':''}" onclick="okoSelectedMonth='${m}';renderOkonomi()">${MONTHS[parseInt(mo)-1].slice(0,3)} ${y}</button>`;
+  }).join('');
+
+  const mo = okoSelectedMonth;
+  const [y, mIdx] = mo.split('-');
+  const mStart = `${mo}-01`;
+  const mEnd = `${mo}-31`;
+  const events = DB.events().filter(e => e.date >= mStart && e.date <= mEnd);
+
+  const elEv = events.filter(e => e.category==='arbejde' && e.type==='Elektriker');
+  const elHrs = elEv.reduce((s,e)=>s+getDurationHours(e.startTime,e.endTime),0);
+  const elLon = elHrs * ELEKTRIKER_RATE;
+
+  const domEv = events.filter(e => e.category==='arbejde' && e.type==='Ishockeydommer');
+  const domHon = domEv.reduce((s,e)=>s+(e.honorar||0),0);
+  const domKrs = domEv.reduce((s,e)=>s+(e.koersel||0),0);
+
+  const totalIndtaegt = elLon + domHon + domKrs;
+  const indkoebU = DB.indkoeb().filter(e=>e.date.startsWith(mo)).reduce((s,e)=>s+e.amount,0);
+  const braendstofU = DB.fuel().filter(e=>e.date.startsWith(mo)).reduce((s,e)=>s+e.amount,0);
+  const totalUdgifter = indkoebU + braendstofU;
+  const netto = totalIndtaegt - totalUdgifter;
+
+  document.getElementById('oko-content').innerHTML = `
+    <div class="net-box">
+      <div class="net-val" style="color:${netto>=0?'var(--green)':'var(--red)'}">${netto>=0?'+':''}${Math.round(netto).toLocaleString('da-DK')} kr</div>
+      <div class="net-lbl">Netto — ${MONTHS[parseInt(mIdx)-1]} ${y}</div>
+    </div>
+    <div class="card oko-section">
+      <div class="card-title" style="color:var(--green)">💰 Indtægt</div>
+      ${elHrs>0?`<div class="oko-row"><span class="lbl">⚡ Elektriker (${fmtH(elHrs)})</span><span class="val" style="color:var(--green)">${fmtKr(elLon)}</span></div>`:''}
+      ${domHon>0?`<div class="oko-row"><span class="lbl">🏒 Dommer honorar (${domEv.length} kampe)</span><span class="val" style="color:var(--green)">${fmtKr(domHon)}</span></div>`:''}
+      ${domKrs>0?`<div class="oko-row"><span class="lbl">🚗 Dommer kørsel</span><span class="val" style="color:var(--green)">${fmtKr(domKrs)}</span></div>`:''}
+      ${totalIndtaegt===0?`<div style="font-size:13px;color:var(--text2)">Ingen registreret indtægt</div>`:''}
+      <div class="oko-row" style="margin-top:4px"><span class="lbl" style="font-weight:700">Total</span><span class="val" style="color:var(--green);font-size:17px">${fmtKr(totalIndtaegt)}</span></div>
+    </div>
+    <div class="card oko-section">
+      <div class="card-title" style="color:var(--red)">💸 Udgifter</div>
+      ${indkoebU>0?`<div class="oko-row"><span class="lbl">🛒 Indkøb</span><span class="val" style="color:var(--red)">${fmtKr(indkoebU)}</span></div>`:''}
+      ${braendstofU>0?`<div class="oko-row"><span class="lbl">⛽ Brændstof</span><span class="val" style="color:var(--red)">${fmtKr(braendstofU)}</span></div>`:''}
+      ${totalUdgifter===0?`<div style="font-size:13px;color:var(--text2)">Ingen registrerede udgifter</div>`:''}
+      <div class="oko-row" style="margin-top:4px"><span class="lbl" style="font-weight:700">Total</span><span class="val" style="color:var(--red);font-size:17px">${fmtKr(totalUdgifter)}</span></div>
+    </div>
+    ${renderOkoChart()}
+  `;
+}
+
+function renderOkoChart() {
+  const months6 = Array.from({length:6},(_,i)=>{
+    const d = new Date(); d.setMonth(d.getMonth()-5+i);
+    return d.toISOString().slice(0,7);
+  });
+  const data = months6.map(mo => {
+    const mStart=`${mo}-01`, mEnd=`${mo}-31`;
+    const ev = DB.events().filter(e=>e.date>=mStart&&e.date<=mEnd);
+    const ind = ev.filter(e=>e.category==='arbejde'&&e.type==='Elektriker').reduce((s,e)=>s+getDurationHours(e.startTime,e.endTime),0)*ELEKTRIKER_RATE
+      + ev.filter(e=>e.category==='arbejde'&&e.type==='Ishockeydommer').reduce((s,e)=>s+(e.honorar||0)+(e.koersel||0),0);
+    const udg = DB.indkoeb().filter(e=>e.date.startsWith(mo)).reduce((s,e)=>s+e.amount,0)
+      + DB.fuel().filter(e=>e.date.startsWith(mo)).reduce((s,e)=>s+e.amount,0);
+    return { mo, ind: Math.round(ind), udg: Math.round(udg) };
+  });
+  const maxVal = Math.max(...data.map(d=>Math.max(d.ind,d.udg)), 1);
+  const labels = months6.map(mo => { const [,m]=mo.split('-'); return MONTHS[parseInt(m)-1].slice(0,3); });
+  return `<div class="card">
+    <div class="card-title">Sidste 6 måneder</div>
+    <div style="display:flex;gap:12px;margin-bottom:8px">
+      <span style="font-size:12px;color:var(--green)">■ Indtægt</span>
+      <span style="font-size:12px;color:var(--red)">■ Udgifter</span>
+    </div>
+    <div style="display:flex;gap:6px;align-items:flex-end;height:80px">
+      ${data.map((d,i) => `
+        <div style="flex:1;display:flex;gap:2px;align-items:flex-end;height:100%">
+          <div style="flex:1;background:var(--green);border-radius:3px 3px 0 0;height:${Math.round(d.ind/maxVal*100)}%;min-height:${d.ind>0?2:0}px;opacity:0.8" title="${d.ind} kr"></div>
+          <div style="flex:1;background:var(--red);border-radius:3px 3px 0 0;height:${Math.round(d.udg/maxVal*100)}%;min-height:${d.udg>0?2:0}px;opacity:0.8" title="${d.udg} kr"></div>
+        </div>`).join('')}
+    </div>
+    <div style="display:flex;gap:6px;margin-top:4px">
+      ${labels.map(l=>`<div style="flex:1;font-size:9px;color:var(--text2);text-align:center">${l}</div>`).join('')}
+    </div>
+  </div>`;
+}
+
+// ===================== STATISTIK CHARTS (Overblik) =====================
+function renderStatCharts() {
+  const months6 = Array.from({length:6},(_,i)=>{
+    const d = new Date(); d.setMonth(d.getMonth()-5+i);
+    return d.toISOString().slice(0,7);
+  });
+  const labels = months6.map(mo => { const [,m]=mo.split('-'); return MONTHS[parseInt(m)-1].slice(0,3); });
+
+  function barGroup(values, color, unit) {
+    const max = Math.max(...values, 1);
+    return `<div class="chart-bars">${values.map((v,i) => `
+      <div class="chart-bar-col">
+        ${v>0?`<div class="chart-bar-val">${unit==='kr'?Math.round(v/100)/10+'k':v}</div>`:''}
+        <div class="chart-bar" style="height:${Math.round(v/max*100)}%;background:${color}"></div>
+      </div>`).join('')}</div>
+    <div class="chart-labels">${labels.map(l=>`<div class="chart-lbl">${l}</div>`).join('')}</div>`;
+  }
+
+  const trData = months6.map(mo => { const [,mStart,mEnd]=[mo,`${mo}-01`,`${mo}-31`]; return DB.events().filter(e=>e.category==='traening'&&e.date>=`${mo}-01`&&e.date<=`${mo}-31`).length; });
+  const kmData = months6.map(mo => Math.round(DB.events().filter(e=>e.category==='traening'&&e.type==='run'&&e.date>=`${mo}-01`&&e.date<=`${mo}-31`).reduce((s,e)=>s+(e.details?.km||0),0)));
+  const udData = months6.map(mo => Math.round(DB.indkoeb().filter(e=>e.date.startsWith(mo)).reduce((s,e)=>s+e.amount,0) + DB.fuel().filter(e=>e.date.startsWith(mo)).reduce((s,e)=>s+e.amount,0)));
+
+  return `<div class="card-title">📈 Statistik (6 mdr.)</div>
+  <div class="card" style="margin-bottom:10px">
+    <div style="font-weight:600;margin-bottom:8px;font-size:14px">🏒 Træning (antal)</div>
+    <div class="chart-wrap">${barGroup(trData,'#4f8ef7','')}</div>
+  </div>
+  <div class="card" style="margin-bottom:10px">
+    <div style="font-weight:600;margin-bottom:8px;font-size:14px">🏃 Løb (km)</div>
+    <div class="chart-wrap">${barGroup(kmData,'#30d158','km')}</div>
+  </div>
+  <div class="card" style="margin-bottom:10px">
+    <div style="font-weight:600;margin-bottom:8px;font-size:14px">💸 Udgifter (kr)</div>
+    <div class="chart-wrap">${barGroup(udData,'#ff9f0a','kr')}</div>
+  </div>`;
+}
+
+// ===================== LOGIN =====================
+const PW_HASH = 'b7fbb9f14ca908bf20c16e78647d36945e254a3b494982890cffb2e58cbc3d95';
+
+async function checkPassword() {
+  const pw = document.getElementById('login-pw').value;
+  const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pw));
+  const hex = Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2,'0')).join('');
+  if (hex === PW_HASH) {
+    sessionStorage.setItem('minapp_auth', '1');
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app').style.display = 'flex';
+  } else {
+    const err = document.getElementById('login-error');
+    err.textContent = 'Forkert kode — prøv igen';
+    const inp = document.getElementById('login-pw');
+    inp.style.borderColor = '#ff453a';
+    inp.value = '';
+    setTimeout(() => { err.textContent = ''; inp.style.borderColor = '#2e2e2e'; }, 2000);
+  }
+}
+
+function initAuth() {
+  if (sessionStorage.getItem('minapp_auth') === '1') {
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app').style.display = 'flex';
+  }
+}
+
+// ===================== INIT =====================
+initAuth();
+updateWeekLabel();
+renderOverblik();
+</script>
+</body>
+</html>
