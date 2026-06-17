@@ -15,7 +15,7 @@ fi
 # Find minapp repo (works on any machine if minapp is sibling of Claude folder)
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 DEST="$SCRIPT_DIR/index.html"
-CLAUDE_DIR="$(dirname "$SCRIPT_DIR")/Claude/projekter/WebbaseretApp_Gustav/MinApp.html"
+CLAUDE_DIR="$(find "$(dirname "$SCRIPT_DIR")/Claude/projekter" -name "MinApp.html" 2>/dev/null | head -1)"
 
 if [ ! -f "$CLAUDE_DIR" ]; then
   exit 0
