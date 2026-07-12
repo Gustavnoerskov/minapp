@@ -363,44 +363,46 @@
       </div>
     </div>
 
-    <!-- ===== TRÆNING ===== -->
-    <div id="view-traening" class="view">
-      <div class="section-hdr">
-        <h2>Træning</h2>
-        <button class="btn btn-primary btn-sm" onclick="openModal('modal-training')">+ Tilføj</button>
+    <!-- ===== AKTIVITETER (Træning / Skole / FT / Arbejde) ===== -->
+    <div id="view-aktiviteter" class="view">
+      <div class="subtabs">
+        <button class="subtab active" id="akt-tab-traening" onclick="showAktivSub('traening')">🏒 Træning</button>
+        <button class="subtab" id="akt-tab-skole" onclick="showAktivSub('skole')">📚 Skole</button>
+        <button class="subtab" id="akt-tab-ft" onclick="showAktivSub('ft')">🎉 FT</button>
+        <button class="subtab" id="akt-tab-arbejde" onclick="showAktivSub('arbejde')">💼 Arbejde</button>
       </div>
-      <div class="week-grid" id="training-week-grid"></div>
-      <div id="training-day-events"></div>
-    </div>
-
-    <!-- ===== SKOLE ===== -->
-    <div id="view-skole" class="view">
-      <div class="section-hdr">
-        <h2>Skole</h2>
-        <button class="btn btn-primary btn-sm" onclick="openModal('modal-school')">+ Tilføj</button>
+      <div id="akt-sub-traening">
+        <div class="section-hdr">
+          <h2>Træning</h2>
+          <button class="btn btn-primary btn-sm" onclick="openModal('modal-training')">+ Tilføj</button>
+        </div>
+        <div class="week-grid" id="training-week-grid"></div>
+        <div id="training-day-events"></div>
       </div>
-      <div class="week-grid" id="school-week-grid"></div>
-      <div id="school-day-events"></div>
-    </div>
-
-    <!-- ===== FT ===== -->
-    <div id="view-ft" class="view">
-      <div class="section-hdr">
-        <h2>Free Time</h2>
-        <button class="btn btn-primary btn-sm" onclick="openModal('modal-ft')">+ Tilføj</button>
+      <div id="akt-sub-skole" style="display:none">
+        <div class="section-hdr">
+          <h2>Skole</h2>
+          <button class="btn btn-primary btn-sm" onclick="openModal('modal-school')">+ Tilføj</button>
+        </div>
+        <div class="week-grid" id="school-week-grid"></div>
+        <div id="school-day-events"></div>
       </div>
-      <div class="week-grid" id="ft-week-grid"></div>
-      <div id="ft-day-events"></div>
-    </div>
-
-    <!-- ===== ARBEJDE ===== -->
-    <div id="view-arbejde" class="view">
-      <div class="section-hdr">
-        <h2>Arbejde</h2>
-        <button class="btn btn-primary btn-sm" onclick="openModal('modal-arbejde')">+ Tilføj</button>
+      <div id="akt-sub-ft" style="display:none">
+        <div class="section-hdr">
+          <h2>Free Time</h2>
+          <button class="btn btn-primary btn-sm" onclick="openModal('modal-ft')">+ Tilføj</button>
+        </div>
+        <div class="week-grid" id="ft-week-grid"></div>
+        <div id="ft-day-events"></div>
       </div>
-      <div class="week-grid" id="arbejde-week-grid"></div>
-      <div id="arbejde-day-events"></div>
+      <div id="akt-sub-arbejde" style="display:none">
+        <div class="section-hdr">
+          <h2>Arbejde</h2>
+          <button class="btn btn-primary btn-sm" onclick="openModal('modal-arbejde')">+ Tilføj</button>
+        </div>
+        <div class="week-grid" id="arbejde-week-grid"></div>
+        <div id="arbejde-day-events"></div>
+      </div>
     </div>
 
     <!-- ===== TODOS ===== -->
@@ -479,17 +481,8 @@
     <button class="nav-btn" onclick="showView('todos',this)">
       <span class="icon">✅</span><span>Todos</span>
     </button>
-    <button class="nav-btn" onclick="showView('traening',this)">
-      <span class="icon">🏒</span><span>Træning</span>
-    </button>
-    <button class="nav-btn" onclick="showView('skole',this)">
-      <span class="icon">📚</span><span>Skole</span>
-    </button>
-    <button class="nav-btn" onclick="showView('ft',this)">
-      <span class="icon">🎉</span><span>FT</span>
-    </button>
-    <button class="nav-btn" onclick="showView('arbejde',this)">
-      <span class="icon">💼</span><span>Arbejde</span>
+    <button class="nav-btn" onclick="showView('aktiviteter',this)">
+      <span class="icon">📋</span><span>Aktiviteter</span>
     </button>
     <button class="nav-btn" onclick="showView('habits',this)">
       <span class="icon">🔥</span><span>Habits</span>
@@ -780,10 +773,7 @@ function changeWeek(dir) {
   currentWeekOffset += dir;
   updateWeekLabel();
   const view = document.querySelector('.view.active').id.replace('view-','');
-  if (view === 'traening') renderTrainingWeek();
-  if (view === 'skole') renderSchoolWeek();
-  if (view === 'ft') renderFTWeek();
-  if (view === 'arbejde') renderArbejdeWeek();
+  if (view === 'aktiviteter') showAktivSub(aktivSub);
   if (view === 'planer') renderPlaner();
 }
 
@@ -796,23 +786,33 @@ function showView(name, btn) {
   document.getElementById('view-' + name).classList.add('active');
   if (btn) btn.classList.add('active');
   document.getElementById('page-title').textContent = {
-    overblik:'Overblik', planer:'Planer', traening:'Træning',
-    skole:'Skole', ft:'Free Time', arbejde:'Arbejde',
+    overblik:'Overblik', planer:'Planer', aktiviteter:'Aktiviteter',
     todos:'Todos', habits:'Habits', okonomi:'Økonomi'
   }[name];
-  const showWeekNav = ['traening','skole','ft','arbejde','planer'].includes(name);
+  const showWeekNav = ['aktiviteter','planer'].includes(name);
   document.getElementById('week-nav').style.display = showWeekNav ? 'flex' : 'none';
   currentView = name;
   updateWeekLabel();
   if (name === 'overblik') { renderOverblik(); renderMaal(); }
   if (name === 'planer') renderPlaner();
+  if (name === 'aktiviteter') showAktivSub(aktivSub);
+  if (name === 'todos') renderTodos();
+  if (name === 'habits') renderHabits();
+  if (name === 'okonomi') { renderOkonomi(); renderFuel(); renderIndkoeb(); }
+}
+
+// Aktiviteter-underfaner: Træning / Skole / FT / Arbejde
+let aktivSub = 'traening';
+function showAktivSub(name) {
+  aktivSub = name;
+  ['traening','skole','ft','arbejde'].forEach(s => {
+    document.getElementById('akt-sub-' + s).style.display = s === name ? 'block' : 'none';
+    document.getElementById('akt-tab-' + s).classList.toggle('active', s === name);
+  });
   if (name === 'traening') renderTrainingWeek();
   if (name === 'skole') renderSchoolWeek();
   if (name === 'ft') renderFTWeek();
   if (name === 'arbejde') renderArbejdeWeek();
-  if (name === 'todos') renderTodos();
-  if (name === 'habits') renderHabits();
-  if (name === 'okonomi') { renderOkonomi(); renderFuel(); renderIndkoeb(); }
 }
 
 // Underfaner: Overblik (main/mål) og Økonomi (oversigt/brændstof/indkøb)
@@ -1002,6 +1002,7 @@ function selectTag(el, rowId, color) {
   el.style.background = hexToRgba(color, 0.2);
   el.style.color = color;
   if (rowId === 'tr-type-row') updateTrainingFields();
+  if (rowId === 'arb-type-row') updateArbejdeFields();
 }
 
 function getSelected(rowId) {
@@ -1561,15 +1562,16 @@ function renderDash() {
       if (totalInd === 0) return '';
       // Efter skat-estimat hvis trækprocent er sat
       const skat = getSkat();
+      const suFast = skat.su || 0;
       let nettoLinje = '';
       if (skat.pct !== null && skat.pct !== undefined && skat.pct !== '') {
         const domHonKun = domEv.reduce((s,e)=>s+(e.honorar||0),0);
         const domKrsKun = domEv.reduce((s,e)=>s+(e.koersel||0),0);
         const brutto = elHrs*ELEKTRIKER_RATE + domHonKun;
         const am = brutto*0.08;
-        const grundlag = Math.max(0, brutto - am - (skat.fradrag||0));
-        const nettoEst = Math.round(brutto - am - grundlag*skat.pct/100 + domKrsKun);
-        nettoLinje = `<div style="font-size:13px;color:var(--green);margin-top:4px">≈ ${nettoEst.toLocaleString('da-DK')} kr efter skat</div>`;
+        const grundlag = Math.max(0, brutto - am + suFast - (skat.fradrag||0));
+        const nettoEst = Math.round(brutto - am + suFast - grundlag*skat.pct/100 + domKrsKun);
+        nettoLinje = `<div style="font-size:13px;color:var(--green);margin-top:4px">≈ ${nettoEst.toLocaleString('da-DK')} kr udbetalt${suFast>0?' (inkl. SU)':' efter skat'}</div>`;
       }
       return `<div class="card" style="margin-bottom:10px">
         <div style="display:flex;justify-content:space-between;align-items:center">
@@ -2530,15 +2532,16 @@ function saveMaalGoal(key, mo) {
 let okoSelectedMonth = null;
 
 function getSkat() {
-  try { return JSON.parse(localStorage.getItem('skat') || '{"pct":null,"fradrag":0}'); }
-  catch { return { pct: null, fradrag: 0 }; }
+  try { return JSON.parse(localStorage.getItem('skat') || '{"pct":null,"fradrag":0,"su":0}'); }
+  catch { return { pct: null, fradrag: 0, su: 0 }; }
 }
 
 function saveSkat() {
   const pct = parseFloat(document.getElementById('skat-pct').value);
   const fradrag = parseFloat(document.getElementById('skat-fradrag').value) || 0;
+  const su = parseFloat(document.getElementById('skat-su').value) || 0;
   if (isNaN(pct) || pct < 0 || pct > 100) { alert('Indtast en trækprocent mellem 0 og 100'); return; }
-  localStorage.setItem('skat', JSON.stringify({ pct, fradrag }));
+  localStorage.setItem('skat', JSON.stringify({ pct, fradrag, su }));
   renderOkonomi();
   if (currentView === 'overblik') renderOverblik();
 }
@@ -2574,25 +2577,28 @@ function renderOkonomi() {
 
   const totalIndtaegt = elLon + domHon + domKrs;
 
-  // --- SKAT ---
-  // Kørsel er skattefri godtgørelse — kun elektrikerløn + honorar beskattes
+  // --- SKAT & SU ---
+  // Kørsel er skattefri godtgørelse. SU er skattepligtig (men uden AM-bidrag) og
+  // bruger af det SAMME månedsfradrag som lønnen — derfor er der mindre fradrag til lønnen.
   const skat = getSkat();
-  const brutto = elLon + domHon;
-  const am = brutto * 0.08; // AM-bidrag 8%
-  const grundlag = Math.max(0, brutto - am - (skat.fradrag || 0));
-  const askat = skat.pct ? grundlag * skat.pct / 100 : 0;
-  const nettoLon = brutto - am - askat + domKrs;
+  const su = skat.su || 0;
   const harSkat = skat.pct !== null && skat.pct !== undefined && skat.pct !== '';
+  const brutto = elLon + domHon;            // skattepligtig arbejdsindkomst
+  const am = brutto * 0.08;                  // AM-bidrag 8% (kun af løn)
+  const workEfterAM = brutto - am;
+  const grundlag = Math.max(0, workEfterAM + su - (skat.fradrag || 0));
+  const askat = harSkat ? grundlag * skat.pct / 100 : 0;
+  const nettoUdbetalt = workEfterAM + su - askat + domKrs; // samlet rådighed inkl. SU + skattefri kørsel
 
   const indkoebU = DB.indkoeb().filter(e=>e.date.startsWith(mo)).reduce((s,e)=>s+e.amount,0);
   const braendstofU = DB.fuel().filter(e=>e.date.startsWith(mo)).reduce((s,e)=>s+e.amount,0);
   const totalUdgifter = indkoebU + braendstofU;
-  const netto = (harSkat ? nettoLon : totalIndtaegt) - totalUdgifter;
+  const netto = (harSkat ? nettoUdbetalt : totalIndtaegt + su) - totalUdgifter;
 
   document.getElementById('oko-content').innerHTML = `
     <div class="net-box">
       <div class="net-val" style="color:${netto>=0?'var(--green)':'var(--red)'}">${netto>=0?'+':''}${Math.round(netto).toLocaleString('da-DK')} kr</div>
-      <div class="net-lbl">Netto${harSkat?' (efter skat)':''} — ${MONTHS[parseInt(mIdx)-1]} ${y}</div>
+      <div class="net-lbl">Netto${harSkat?' (efter skat, inkl. SU)':(su>0?' (inkl. SU)':'')} — ${MONTHS[parseInt(mIdx)-1]} ${y}</div>
     </div>
     <div class="card oko-section">
       <div class="card-title" style="color:var(--green)">💰 Indtægt</div>
@@ -2603,21 +2609,23 @@ function renderOkonomi() {
       <div class="oko-row" style="margin-top:4px"><span class="lbl" style="font-weight:700">Total brutto</span><span class="val" style="color:var(--green);font-size:17px">${fmtKr(totalIndtaegt)}</span></div>
     </div>
     <div class="card oko-section">
-      <div class="card-title">🧾 Skat & nettoløn</div>
-      ${harSkat && brutto > 0 ? `
-        <div class="oko-row"><span class="lbl">Brutto (skattepligtig)</span><span class="val">${fmtKr(brutto)}</span></div>
-        <div class="oko-row"><span class="lbl">AM-bidrag (8%)</span><span class="val" style="color:var(--red)">−${fmtKr(am)}</span></div>
-        <div class="oko-row"><span class="lbl">Månedsfradrag</span><span class="val">${fmtKr(skat.fradrag || 0)}</span></div>
+      <div class="card-title">🧾 Skat, SU & nettoløn</div>
+      ${harSkat && (brutto > 0 || su > 0) ? `
+        <div class="oko-row"><span class="lbl">Løn brutto (skattepligtig)</span><span class="val">${fmtKr(brutto)}</span></div>
+        <div class="oko-row"><span class="lbl">AM-bidrag (8% af løn)</span><span class="val" style="color:var(--red)">−${fmtKr(am)}</span></div>
+        ${su>0?`<div class="oko-row"><span class="lbl">🎓 SU (fast, skattepligtig)</span><span class="val" style="color:var(--green)">+${fmtKr(su)}</span></div>`:''}
+        <div class="oko-row"><span class="lbl">Månedsfradrag (deles af løn + SU)</span><span class="val" style="color:var(--red)">−${fmtKr(skat.fradrag || 0)}</span></div>
         <div class="oko-row"><span class="lbl">A-skat (${skat.pct}% af ${fmtKr(grundlag)})</span><span class="val" style="color:var(--red)">−${fmtKr(askat)}</span></div>
         ${domKrs>0?`<div class="oko-row"><span class="lbl">+ Skattefri kørsel</span><span class="val" style="color:var(--green)">+${fmtKr(domKrs)}</span></div>`:''}
-        <div class="oko-row" style="margin-top:4px"><span class="lbl" style="font-weight:700">Estimeret udbetalt</span><span class="val" style="color:var(--green);font-size:17px">${fmtKr(nettoLon)}</span></div>
-      ` : `<div style="font-size:13px;color:var(--text2);margin-bottom:4px">${brutto>0?'Indtast trækprocent og fradrag for at se nettoløn':'Ingen skattepligtig indtægt denne måned'}</div>`}
-      <div style="display:flex;gap:8px;margin-top:12px;align-items:center">
-        <input type="number" id="skat-pct" placeholder="Træk-%" value="${skat.pct ?? ''}" style="flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:14px;padding:9px 12px;outline:none;font-family:inherit">
-        <input type="number" id="skat-fradrag" placeholder="Fradrag/md" value="${skat.fradrag || ''}" style="flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:14px;padding:9px 12px;outline:none;font-family:inherit">
-        <button class="btn btn-primary btn-sm" style="white-space:nowrap" onclick="saveSkat()">Gem</button>
+        <div class="oko-row" style="margin-top:4px"><span class="lbl" style="font-weight:700">Estimeret udbetalt i alt</span><span class="val" style="color:var(--green);font-size:17px">${fmtKr(nettoUdbetalt)}</span></div>
+      ` : `<div style="font-size:13px;color:var(--text2);margin-bottom:4px">${(brutto>0||su>0)?'Indtast trækprocent for at se nettoløn':'Ingen skattepligtig indtægt denne måned'}</div>`}
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:12px">
+        <input type="number" id="skat-pct" placeholder="Træk-%" value="${skat.pct ?? ''}" style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:14px;padding:9px 10px;outline:none;font-family:inherit;width:100%">
+        <input type="number" id="skat-fradrag" placeholder="Fradrag/md" value="${skat.fradrag || ''}" style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:14px;padding:9px 10px;outline:none;font-family:inherit;width:100%">
+        <input type="number" id="skat-su" placeholder="SU/md" value="${su || ''}" style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:14px;padding:9px 10px;outline:none;font-family:inherit;width:100%">
       </div>
-      <div style="font-size:11px;color:var(--text2);margin-top:8px">Find trækprocent og månedsfradrag på dit skattekort (skat.dk → Forskudsopgørelse)</div>
+      <button class="btn btn-primary btn-sm" style="width:100%;margin-top:8px" onclick="saveSkat()">Gem skatteoplysninger</button>
+      <div style="font-size:11px;color:var(--text2);margin-top:8px">Trækprocent og månedsfradrag står på dit skattekort (skat.dk → Forskudsopgørelse). SU angives som månedligt beløb før skat.</div>
     </div>
     <div class="card oko-section">
       <div class="card-title" style="color:var(--red)">💸 Udgifter</div>
