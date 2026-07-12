@@ -7,6 +7,8 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="MinApp">
 <meta name="theme-color" content="#0f0f0f">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
 <title>MinApp</title>
 <style>
   :root {
@@ -188,6 +190,12 @@
     transition: all 0.15s;
   }
   .tag-pill.selected { color: #fff; }
+  .tag-pill.tool { border: 1px dashed var(--border); color: var(--text2); background: none; }
+
+  /* SUBTABS */
+  .subtabs { display: flex; gap: 6px; margin-bottom: 14px; }
+  .subtab { flex: 1; background: var(--bg3); border: none; color: var(--text2); padding: 9px 0; border-radius: var(--radius-sm); font-size: 13px; font-weight: 600; cursor: pointer; }
+  .subtab.active { background: var(--accent); color: #fff; }
 
   /* SECTION HEADER */
   .section-hdr { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
@@ -313,24 +321,38 @@
 
     <!-- ===== OVERBLIK ===== -->
     <div id="view-overblik" class="view active">
-      <div id="overblik-dash"></div>
-      <div id="overblik-tracker"></div>
-      <div id="overblik-charts"></div>
-      <div id="overblik-data-section" style="margin-top:20px;">
-        <div class="card-title">Data</div>
-        <div class="card" style="display:flex;flex-direction:column;gap:10px;">
-          <button class="btn btn-ghost" onclick="exportData()">📤 Eksportér data</button>
-          <label class="btn btn-ghost" style="cursor:pointer;">
-            📥 Importér data
-            <input type="file" id="import-input" accept=".json" style="display:none" onchange="importData(event)">
-          </label>
-          <div id="import-status" style="font-size:13px;color:var(--text2);text-align:center;min-height:18px;"></div>
+      <div class="subtabs">
+        <button class="subtab active" id="ov-tab-main" onclick="showOvSub('main')">📊 Overblik</button>
+        <button class="subtab" id="ov-tab-maal" onclick="showOvSub('maal')">🎯 Mål</button>
+      </div>
+      <div id="ov-main">
+        <div id="overblik-dash"></div>
+        <div id="overblik-tracker"></div>
+        <div id="overblik-charts"></div>
+        <div id="overblik-data-section" style="margin-top:20px;">
+          <div class="card-title">Data</div>
+          <div class="card" style="display:flex;flex-direction:column;gap:10px;">
+            <button class="btn btn-ghost" onclick="exportData()">📤 Eksportér data</button>
+            <label class="btn btn-ghost" style="cursor:pointer;">
+              📥 Importér data
+              <input type="file" id="import-input" accept=".json" style="display:none" onchange="importData(event)">
+            </label>
+            <div id="import-status" style="font-size:13px;color:var(--text2);text-align:center;min-height:18px;"></div>
+          </div>
         </div>
+      </div>
+      <div id="ov-maal" style="display:none">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <span style="font-weight:700;font-size:16px">🎯 Mål</span>
+          <div id="maal-month-selector" style="font-size:13px;color:var(--text2)"></div>
+        </div>
+        <div id="maal-content"></div>
       </div>
     </div>
 
     <!-- ===== PLANER ===== -->
     <div id="view-planer" class="view">
+      <button class="btn btn-primary" style="margin-bottom:12px" onclick="openModal('modal-add-choose')">+ Tilføj aftale</button>
       <div id="overblik-today"></div>
       <div id="overblik-upcoming"></div>
       <div class="card" style="margin-bottom:10px">
@@ -339,18 +361,6 @@
       <div class="card">
         <div id="planer-day-detail"></div>
       </div>
-    </div>
-
-    <!-- ===== BRÆNDSTOF ===== -->
-    <div id="view-braendstof" class="view">
-      <div class="section-hdr">
-        <h2>Brændstof</h2>
-        <button class="btn btn-primary btn-sm" onclick="openModal('modal-fuel')">+ Tilføj</button>
-      </div>
-      <div id="fuel-month-tabs" class="month-tabs"></div>
-      <div id="fuel-summary" class="stats-row"></div>
-      <div class="card-title">Historik</div>
-      <div id="fuel-list"></div>
     </div>
 
     <!-- ===== TRÆNING ===== -->
@@ -381,19 +391,6 @@
       </div>
       <div class="week-grid" id="ft-week-grid"></div>
       <div id="ft-day-events"></div>
-    </div>
-
-    <!-- ===== INDKØB ===== -->
-    <div id="view-indkoeb" class="view">
-      <div class="section-hdr">
-        <h2>Indkøb</h2>
-        <button class="btn btn-primary btn-sm" onclick="openModal('modal-indkoeb')">+ Tilføj</button>
-      </div>
-      <div id="indkoeb-goal-section" class="card" style="margin-bottom:12px"></div>
-      <div id="indkoeb-month-tabs" class="month-tabs"></div>
-      <div id="indkoeb-summary"></div>
-      <div class="card-title">Historik</div>
-      <div id="indkoeb-list"></div>
     </div>
 
     <!-- ===== ARBEJDE ===== -->
@@ -435,22 +432,38 @@
       </div>
     </div>
 
-    <!-- ===== MÅL ===== -->
-    <div id="view-maal" class="view">
-      <div class="section-hdr">
-        <h2>Mål</h2>
-        <div id="maal-month-selector" style="font-size:13px;color:var(--text2)"></div>
-      </div>
-      <div id="maal-content"></div>
-    </div>
-
     <!-- ===== ØKONOMI ===== -->
     <div id="view-okonomi" class="view">
-      <div class="section-hdr">
-        <h2>Økonomi</h2>
+      <div class="subtabs">
+        <button class="subtab active" id="oko-tab-oversigt" onclick="showOkoSub('oversigt')">💰 Oversigt</button>
+        <button class="subtab" id="oko-tab-braendstof" onclick="showOkoSub('braendstof')">⛽ Brændstof</button>
+        <button class="subtab" id="oko-tab-indkoeb" onclick="showOkoSub('indkoeb')">🛒 Indkøb</button>
       </div>
-      <div id="oko-month-tabs" class="month-tabs"></div>
-      <div id="oko-content"></div>
+      <div id="oko-sub-oversigt">
+        <div id="oko-month-tabs" class="month-tabs"></div>
+        <div id="oko-content"></div>
+      </div>
+      <div id="oko-sub-braendstof" style="display:none">
+        <div class="section-hdr">
+          <h2>Brændstof</h2>
+          <button class="btn btn-primary btn-sm" onclick="openModal('modal-fuel')">+ Tilføj</button>
+        </div>
+        <div id="fuel-month-tabs" class="month-tabs"></div>
+        <div id="fuel-summary" class="stats-row"></div>
+        <div class="card-title">Historik</div>
+        <div id="fuel-list"></div>
+      </div>
+      <div id="oko-sub-indkoeb" style="display:none">
+        <div class="section-hdr">
+          <h2>Indkøb</h2>
+          <button class="btn btn-primary btn-sm" onclick="openModal('modal-indkoeb')">+ Tilføj</button>
+        </div>
+        <div id="indkoeb-goal-section" class="card" style="margin-bottom:12px"></div>
+        <div id="indkoeb-month-tabs" class="month-tabs"></div>
+        <div id="indkoeb-summary"></div>
+        <div class="card-title">Historik</div>
+        <div id="indkoeb-list"></div>
+      </div>
     </div>
 
   </div>
@@ -463,8 +476,8 @@
     <button class="nav-btn" onclick="showView('planer',this)">
       <span class="icon">📅</span><span>Planer</span>
     </button>
-    <button class="nav-btn" onclick="showView('braendstof',this)">
-      <span class="icon">⛽</span><span>Brændstof</span>
+    <button class="nav-btn" onclick="showView('todos',this)">
+      <span class="icon">✅</span><span>Todos</span>
     </button>
     <button class="nav-btn" onclick="showView('traening',this)">
       <span class="icon">🏒</span><span>Træning</span>
@@ -478,17 +491,8 @@
     <button class="nav-btn" onclick="showView('arbejde',this)">
       <span class="icon">💼</span><span>Arbejde</span>
     </button>
-    <button class="nav-btn" onclick="showView('indkoeb',this)">
-      <span class="icon">🛒</span><span>Indkøb</span>
-    </button>
-    <button class="nav-btn" onclick="showView('todos',this)">
-      <span class="icon">✅</span><span>Todos</span>
-    </button>
     <button class="nav-btn" onclick="showView('habits',this)">
       <span class="icon">🔥</span><span>Habits</span>
-    </button>
-    <button class="nav-btn" onclick="showView('maal',this)">
-      <span class="icon">🎯</span><span>Mål</span>
     </button>
     <button class="nav-btn" onclick="showView('okonomi',this)">
       <span class="icon">💰</span><span>Økonomi</span>
@@ -539,10 +543,7 @@
       <select id="tr-date"></select>
     </div>
     <div class="form-group"><label>Type</label>
-      <div class="tag-row" id="tr-type-row">
-        <div class="tag-pill selected" style="border-color:#4f8ef7;background:rgba(79,142,247,0.2);color:#4f8ef7" data-val="hockey" onclick="selectTag(this,'tr-type-row','#4f8ef7')">🏒 Ishockey</div>
-        <div class="tag-pill" data-val="run" onclick="selectTag(this,'tr-type-row','#30d158')">🏃 Løb</div>
-      </div>
+      <div class="tag-row" id="tr-type-row"></div>
     </div>
     <div class="form-row">
       <div class="form-group"><label>Start tidspunkt</label><input type="time" id="tr-start"></div>
@@ -573,11 +574,7 @@
       <div class="form-group"><label>Slut</label><input type="time" id="sc-end"></div>
     </div>
     <div class="form-group"><label>Type</label>
-      <div class="tag-row" id="sc-type-row">
-        <div class="tag-pill selected" style="border-color:#bf5af2;background:rgba(191,90,242,0.2);color:#bf5af2" data-val="forelæsning" onclick="selectTag(this,'sc-type-row','#bf5af2')">📖 Forelæsning</div>
-        <div class="tag-pill" data-val="lektier" onclick="selectTag(this,'sc-type-row','#bf5af2')">✏️ Lektier</div>
-        <div class="tag-pill" data-val="opgave" onclick="selectTag(this,'sc-type-row','#bf5af2')">📝 Opgave</div>
-      </div>
+      <div class="tag-row" id="sc-type-row"></div>
     </div>
     <div class="form-group"><label>Note (valgfri)</label><textarea id="sc-note" placeholder="Eks. Kapitel 4-6..."></textarea></div>
     <div id="sc-conflict" style="margin-bottom:10px;"></div>
@@ -594,12 +591,7 @@
     <div class="form-group"><label>Dag</label><select id="arb-date"></select></div>
     <div class="form-group"><label>Titel</label><input type="text" id="arb-title" placeholder="Eks. El-vagt, kamp nr. 3..."></div>
     <div class="form-group"><label>Type</label>
-      <div class="tag-row" id="arb-type-row">
-        <div class="tag-pill selected" style="border-color:#34c759;background:rgba(52,199,89,0.2);color:#34c759" data-val="Elektriker" onclick="selectTag(this,'arb-type-row','#34c759');updateArbejdeFields()">⚡ Elektriker</div>
-        <div class="tag-pill" data-val="Ishockeydommer" onclick="selectTag(this,'arb-type-row','#4f8ef7');updateArbejdeFields()">🏒 Dommer</div>
-        <div class="tag-pill" data-val="Møde" onclick="selectTag(this,'arb-type-row','#ff9f0a');updateArbejdeFields()">🤝 Møde</div>
-        <div class="tag-pill" data-val="Andet" onclick="selectTag(this,'arb-type-row','#9a9a9a');updateArbejdeFields()">✨ Andet</div>
-      </div>
+      <div class="tag-row" id="arb-type-row"></div>
     </div>
     <div class="form-row">
       <div class="form-group"><label>Start</label><input type="time" id="arb-start"></div>
@@ -630,12 +622,7 @@
       <div class="form-group"><label>Slut</label><input type="time" id="ft-end"></div>
     </div>
     <div class="form-group"><label>Med hvem?</label>
-      <div class="tag-row" id="ft-who-row">
-        <div class="tag-pill selected" style="border-color:#ff9f0a;background:rgba(255,159,10,0.2);color:#ff9f0a" data-val="Familie" onclick="selectTag(this,'ft-who-row','#ff9f0a')">👨‍👩‍👦 Familie</div>
-        <div class="tag-pill" data-val="Caroline" onclick="selectTag(this,'ft-who-row','#ff9f0a')">💕 Caroline</div>
-        <div class="tag-pill" data-val="Venner" onclick="selectTag(this,'ft-who-row','#ff9f0a')">👥 Venner</div>
-        <div class="tag-pill" data-val="Andet" onclick="selectTag(this,'ft-who-row','#ff9f0a')">✨ Andet</div>
-      </div>
+      <div class="tag-row" id="ft-who-row"></div>
     </div>
     <div class="form-group"><label>Note (valgfri)</label><textarea id="ft-note" placeholder="Eks. Restaurant kl 19..."></textarea></div>
     <div id="ft-conflict" style="margin-bottom:10px;"></div>
@@ -663,15 +650,25 @@
       </div>
     </div>
     <div class="form-group"><label>Projekt</label>
-      <div class="tag-row" id="td-project-row">
-        <div class="tag-pill selected" style="border-color:#9a9a9a;background:rgba(154,154,154,0.2);color:#9a9a9a" data-val="Inbox" onclick="selectTag(this,'td-project-row','#9a9a9a')">📥 Inbox</div>
-        <div class="tag-pill" data-val="Personlig" onclick="selectTag(this,'td-project-row','#4f8ef7')">👤 Personlig</div>
-        <div class="tag-pill" data-val="Skole" onclick="selectTag(this,'td-project-row','#bf5af2')">📚 Skole</div>
-        <div class="tag-pill" data-val="Arbejde" onclick="selectTag(this,'td-project-row','#34c759')">💼 Arbejde</div>
-      </div>
+      <div class="tag-row" id="td-project-row"></div>
     </div>
     <button class="btn btn-primary" onclick="saveTodo()">Gem</button>
     <button class="btn btn-ghost" style="margin-top:8px" onclick="closeModal('modal-todo');editingTodoId=null">Annuller</button>
+  </div>
+</div>
+
+<!-- VÆLG AFTALETYPE MODAL (fra Planer) -->
+<div class="modal-overlay" id="modal-add-choose">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h2>Hvad vil du tilføje?</h2>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <button class="btn btn-ghost" style="border-left:4px solid #4f8ef7" onclick="addFromPlaner('traening')">🏒 Træning</button>
+      <button class="btn btn-ghost" style="border-left:4px solid #bf5af2" onclick="addFromPlaner('skole')">📚 Skole</button>
+      <button class="btn btn-ghost" style="border-left:4px solid #ff9f0a" onclick="addFromPlaner('ft')">🎉 Free Time</button>
+      <button class="btn btn-ghost" style="border-left:4px solid #34c759" onclick="addFromPlaner('arbejde')">💼 Arbejde</button>
+    </div>
+    <button class="btn btn-ghost" style="margin-top:12px" onclick="closeModal('modal-add-choose')">Annuller</button>
   </div>
 </div>
 
@@ -799,26 +796,38 @@ function showView(name, btn) {
   document.getElementById('view-' + name).classList.add('active');
   if (btn) btn.classList.add('active');
   document.getElementById('page-title').textContent = {
-    overblik:'Overblik', planer:'Planer', braendstof:'Brændstof', traening:'Træning',
-    skole:'Skole', ft:'Free Time', arbejde:'Arbejde', indkoeb:'Indkøb',
-    todos:'Todos', habits:'Habits', maal:'Mål', okonomi:'Økonomi'
+    overblik:'Overblik', planer:'Planer', traening:'Træning',
+    skole:'Skole', ft:'Free Time', arbejde:'Arbejde',
+    todos:'Todos', habits:'Habits', okonomi:'Økonomi'
   }[name];
   const showWeekNav = ['traening','skole','ft','arbejde','planer'].includes(name);
   document.getElementById('week-nav').style.display = showWeekNav ? 'flex' : 'none';
   currentView = name;
   updateWeekLabel();
-  if (name === 'overblik') renderOverblik();
+  if (name === 'overblik') { renderOverblik(); renderMaal(); }
   if (name === 'planer') renderPlaner();
-  if (name === 'braendstof') renderFuel();
   if (name === 'traening') renderTrainingWeek();
   if (name === 'skole') renderSchoolWeek();
   if (name === 'ft') renderFTWeek();
   if (name === 'arbejde') renderArbejdeWeek();
-  if (name === 'indkoeb') renderIndkoeb();
   if (name === 'todos') renderTodos();
   if (name === 'habits') renderHabits();
-  if (name === 'maal') renderMaal();
-  if (name === 'okonomi') renderOkonomi();
+  if (name === 'okonomi') { renderOkonomi(); renderFuel(); renderIndkoeb(); }
+}
+
+// Underfaner: Overblik (main/mål) og Økonomi (oversigt/brændstof/indkøb)
+function showOvSub(name) {
+  document.getElementById('ov-main').style.display = name === 'main' ? 'block' : 'none';
+  document.getElementById('ov-maal').style.display = name === 'maal' ? 'block' : 'none';
+  document.getElementById('ov-tab-main').classList.toggle('active', name === 'main');
+  document.getElementById('ov-tab-maal').classList.toggle('active', name === 'maal');
+}
+
+function showOkoSub(name) {
+  ['oversigt','braendstof','indkoeb'].forEach(s => {
+    document.getElementById('oko-sub-' + s).style.display = s === name ? 'block' : 'none';
+    document.getElementById('oko-tab-' + s).classList.toggle('active', s === name);
+  });
 }
 
 // ===================== MODALS =====================
@@ -827,6 +836,13 @@ function openModal(id) {
   const modId = id.replace('modal-','');
   const selId = {training:'tr-date', school:'sc-date', ft:'ft-date', arbejde:'arb-date'}[modId];
   if (selId) populateDateSelect(selId);
+  // Byg kategori-pills dynamisk (medmindre editEvent allerede har sat dem)
+  if (!editingEventId && !editingTodoId) {
+    if (id === 'modal-training') renderTagRow('tr-type-row','tr');
+    if (id === 'modal-school')   renderTagRow('sc-type-row','sc');
+    if (id === 'modal-arbejde')  renderTagRow('arb-type-row','arb');
+    if (id === 'modal-ft')       renderTagRow('ft-who-row','ft');
+  }
   // Pre-fill today's date for fuel
   if (id === 'modal-fuel') document.getElementById('fuel-date').value = todayStr();
   if (id === 'modal-indkoeb' && !editingIndkoebId) {
@@ -895,24 +911,14 @@ function editEvent(id) {
 
   if (e.category === 'traening') {
     populateDateSelect('tr-date', e.date);
-    // Sæt type
-    const typeVal = e.type === 'hockey' ? 'hockey' : 'run';
-    document.querySelectorAll('#tr-type-row .tag-pill').forEach(p => {
-      const isMatch = p.dataset.val === typeVal;
-      p.classList.toggle('selected', isMatch);
-      const col = typeVal === 'hockey' ? '#4f8ef7' : '#30d158';
-      if (isMatch) {
-        p.style.borderColor = col; p.style.background = hexToRgba(col, 0.2); p.style.color = col;
-      } else {
-        p.style.borderColor = 'transparent'; p.style.background = 'var(--bg3)'; p.style.color = 'var(--text2)';
-      }
-    });
+    renderTagRow('tr-type-row', 'tr', e.type);
     updateTrainingFields();
     document.getElementById('tr-start').value = e.startTime || '';
-    if (e.type === 'hockey') document.getElementById('tr-duration').value = e.details?.duration || 90;
     if (e.type === 'run') {
       document.getElementById('tr-km').value = e.details?.km || '';
       document.getElementById('tr-pace').value = e.details?.pace || '';
+    } else {
+      document.getElementById('tr-duration').value = e.details?.duration || 90;
     }
     document.getElementById('tr-note').value = e.note || '';
     document.querySelector('#modal-training h2').textContent = 'Redigér træning';
@@ -923,7 +929,7 @@ function editEvent(id) {
     document.getElementById('sc-title').value = e.title || '';
     document.getElementById('sc-start').value = e.startTime || '';
     document.getElementById('sc-end').value = e.endTime || '';
-    setTagByVal('sc-type-row', e.type, '#bf5af2');
+    renderTagRow('sc-type-row', 'sc', e.type);
     document.getElementById('sc-note').value = e.note || '';
     document.querySelector('#modal-school h2').textContent = 'Redigér skoletid';
     document.getElementById('modal-school').classList.add('open');
@@ -933,7 +939,7 @@ function editEvent(id) {
     document.getElementById('ft-title').value = e.title || '';
     document.getElementById('ft-start').value = e.startTime || '';
     document.getElementById('ft-end').value = e.endTime || '';
-    setTagByVal('ft-who-row', e.who, '#ff9f0a');
+    renderTagRow('ft-who-row', 'ft', e.who);
     document.getElementById('ft-note').value = e.note || '';
     document.querySelector('#modal-ft h2').textContent = 'Redigér aftale';
     document.getElementById('modal-ft').classList.add('open');
@@ -943,7 +949,7 @@ function editEvent(id) {
     document.getElementById('arb-title').value = e.title || '';
     document.getElementById('arb-start').value = e.startTime || '';
     document.getElementById('arb-end').value = e.endTime || '';
-    setTagByVal('arb-type-row', e.type, ARB_TYPE_COLORS[e.type] || '#34c759');
+    renderTagRow('arb-type-row', 'arb', e.type);
     updateArbejdeFields();
     if (e.type === 'Ishockeydommer') {
       document.getElementById('arb-honorar').value = e.honorar || '';
@@ -1010,11 +1016,113 @@ function hexToRgba(hex, a) {
 
 function updateTrainingFields() {
   const type = getSelected('tr-type-row');
+  // Løb har km/pace — alle andre typer (også egne) bruger varighed
   document.getElementById('tr-run-fields').style.display = type === 'run' ? 'block' : 'none';
-  document.getElementById('tr-duration-group').style.display = type === 'hockey' ? 'block' : 'none';
+  document.getElementById('tr-duration-group').style.display = type === 'run' ? 'none' : 'block';
 }
 
-const ARB_TYPE_COLORS = { 'Elektriker': '#34c759', 'Ishockeydommer': '#4f8ef7', 'Møde': '#ff9f0a', 'Andet': '#9a9a9a' };
+// ===================== KATEGORIER (redigérbare) =====================
+// locked = kan ikke slettes (har særlig logik: løn, honorar, km/pace-felter)
+const CAT_DEFAULTS = {
+  tr: [
+    { val:'hockey', label:'🏒 Ishockey', color:'#4f8ef7', locked:true },
+    { val:'run', label:'🏃 Løb', color:'#30d158', locked:true },
+  ],
+  sc: [
+    { val:'forelæsning', label:'📖 Forelæsning', color:'#bf5af2' },
+    { val:'lektier', label:'✏️ Lektier', color:'#a855f7' },
+    { val:'opgave', label:'📝 Opgave', color:'#7c3aed' },
+  ],
+  arb: [
+    { val:'Elektriker', label:'⚡ Elektriker', color:'#34c759', locked:true },
+    { val:'Ishockeydommer', label:'🏒 Dommer', color:'#4f8ef7', locked:true },
+    { val:'Møde', label:'🤝 Møde', color:'#ff9f0a' },
+    { val:'Andet', label:'✨ Andet', color:'#9a9a9a' },
+  ],
+  ft: [
+    { val:'Familie', label:'👨‍👩‍👦 Familie', color:'#ff9f0a' },
+    { val:'Caroline', label:'💕 Caroline', color:'#ff375f' },
+    { val:'Venner', label:'👥 Venner', color:'#ff9f0a' },
+    { val:'Andet', label:'✨ Andet', color:'#9a9a9a' },
+  ],
+  td: [
+    { val:'Inbox', label:'📥 Inbox', color:'#9a9a9a', locked:true },
+    { val:'Personlig', label:'👤 Personlig', color:'#4f8ef7' },
+    { val:'Skole', label:'📚 Skole', color:'#bf5af2' },
+    { val:'Arbejde', label:'💼 Arbejde', color:'#34c759' },
+  ],
+};
+const CAT_PALETTE = ['#4f8ef7','#30d158','#ff9f0a','#bf5af2','#ff375f','#30b0c7','#ffd60a','#ff453a'];
+
+function getCats(key) {
+  const stored = localStorage.getItem('cats_' + key);
+  if (!stored) return CAT_DEFAULTS[key].map(c => ({...c}));
+  let list;
+  try { list = JSON.parse(stored); } catch { return CAT_DEFAULTS[key].map(c => ({...c})); }
+  // Sørg for at låste standarder altid findes (deres logik afhænger af dem)
+  CAT_DEFAULTS[key].filter(d => d.locked && !list.find(l => l.val === d.val))
+    .forEach(d => list.unshift({...d}));
+  return list;
+}
+
+function saveCats(key, list) { localStorage.setItem('cats_' + key, JSON.stringify(list)); }
+function catColor(key, val) { const c = getCats(key).find(c => c.val === val); return c ? c.color : '#9a9a9a'; }
+function catLabel(key, val) { const c = getCats(key).find(c => c.val === val); return c ? c.label : val; }
+
+function renderTagRow(rowId, key, selectedVal = null) {
+  const row = document.getElementById(rowId);
+  if (!row) return;
+  const cats = getCats(key);
+  if (!selectedVal || (!cats.find(c => c.val === selectedVal) && selectedVal)) {
+    // Vælg første hvis intet valgt; behold ukendt værdi (fx slettet kategori på gammelt event) som midlertidig pill
+    if (selectedVal && !cats.find(c => c.val === selectedVal)) cats.push({ val:selectedVal, label:selectedVal, color:'#9a9a9a', temp:true });
+    else selectedVal = cats[0]?.val;
+  }
+  const editing = row.dataset.editing === '1';
+  row.innerHTML = cats.map(c => {
+    const sel = c.val === selectedVal;
+    const delTag = editing && !c.locked && !c.temp;
+    const style = sel ? `border-color:${c.color};background:${hexToRgba(c.color,0.2)};color:${c.color}` : '';
+    return `<div class="tag-pill ${sel?'selected':''}" style="${style}" data-val="${c.val}" data-color="${c.color}"
+      onclick="tagClick(this,'${rowId}','${key}')">${c.label}${delTag ? ' ✕' : (editing && c.locked ? ' 🔒' : '')}</div>`;
+  }).join('') +
+    `<div class="tag-pill tool" onclick="addCat('${rowId}','${key}')">＋</div>` +
+    `<div class="tag-pill tool" onclick="toggleCatEdit('${rowId}','${key}')">${editing ? 'Færdig' : '✎'}</div>`;
+}
+
+function tagClick(el, rowId, key) {
+  const row = document.getElementById(rowId);
+  const val = el.dataset.val;
+  if (row.dataset.editing === '1') {
+    const cats = getCats(key);
+    const cat = cats.find(c => c.val === val);
+    if (!cat || cat.locked) return; // låste kan ikke slettes
+    if (confirm(`Slet kategorien "${val}"? Eksisterende registreringer beholder navnet.`)) {
+      saveCats(key, cats.filter(c => c.val !== val));
+      renderTagRow(rowId, key);
+    }
+    return;
+  }
+  selectTag(el, rowId, el.dataset.color);
+}
+
+function addCat(rowId, key) {
+  const name = prompt('Navn på ny kategori:');
+  if (!name || !name.trim()) return;
+  const cats = getCats(key);
+  if (cats.find(c => c.val.toLowerCase() === name.trim().toLowerCase())) { alert('Findes allerede'); return; }
+  const color = CAT_PALETTE[cats.length % CAT_PALETTE.length];
+  cats.push({ val: name.trim(), label: name.trim(), color });
+  saveCats(key, cats);
+  renderTagRow(rowId, key, name.trim());
+}
+
+function toggleCatEdit(rowId, key) {
+  const row = document.getElementById(rowId);
+  row.dataset.editing = row.dataset.editing === '1' ? '' : '1';
+  const sel = getSelected(rowId);
+  renderTagRow(rowId, key, sel);
+}
 
 function updateArbejdeFields() {
   const type = getSelected('arb-type-row');
@@ -1086,18 +1194,19 @@ function saveTraining() {
   if (!date || !start) { alert('Vælg dag og starttidspunkt'); return; }
 
   let endMin, title, details;
-  if (type === 'hockey') {
-    const dur = parseInt(document.getElementById('tr-duration').value) || 90;
-    endMin = timeToMin(start) + dur;
-    title = '🏒 Ishockey';
-    details = { duration: dur };
-  } else {
+  if (type === 'run') {
     const km = parseFloat(document.getElementById('tr-km').value) || 5;
     const pace = parseFloat(document.getElementById('tr-pace').value) || 5.5;
     const durMin = Math.round(km * pace);
     endMin = timeToMin(start) + durMin;
     title = `🏃 Løb ${km}km`;
     details = { km, pace };
+  } else {
+    // Ishockey og egne typer: varighed i minutter
+    const dur = parseInt(document.getElementById('tr-duration').value) || 90;
+    endMin = timeToMin(start) + dur;
+    title = catLabel('tr', type);
+    details = { duration: dur };
   }
   const end = minToTime(endMin);
   const cf = hasConflict(date, timeToMin(start), endMin, editingEventId);
@@ -1112,6 +1221,7 @@ function saveTraining() {
   resetModalTitle('modal-training', 'Tilføj træning');
   closeModal('modal-training');
   renderTrainingWeek();
+  if (currentView === 'planer') renderPlaner();
   document.getElementById('tr-note').value = '';
 }
 
@@ -1137,6 +1247,7 @@ function saveSchool() {
   resetModalTitle('modal-school', 'Tilføj skoletid');
   closeModal('modal-school');
   renderSchoolWeek();
+  if (currentView === 'planer') renderPlaner();
   document.getElementById('sc-title').value = '';
   document.getElementById('sc-note').value = '';
 }
@@ -1163,6 +1274,7 @@ function saveFT() {
   resetModalTitle('modal-ft', 'Tilføj aftale');
   closeModal('modal-ft');
   renderFTWeek();
+  if (currentView === 'planer') renderPlaner();
   document.getElementById('ft-title').value = '';
   document.getElementById('ft-note').value = '';
 }
@@ -1305,8 +1417,8 @@ function renderDayEvents(containerId, date, category, color) {
   }
   container.innerHTML += events.map(e => {
     let sub = `${e.startTime}–${e.endTime}`;
-    if (e.category === 'traening' && e.type === 'run') sub += ` · ${e.details?.km}km @ ${e.details?.pace}min/km`;
-    if (e.category === 'traening' && e.type === 'hockey') sub += ` · ${e.details?.duration} min`;
+    if (e.category === 'traening' && e.details?.km) sub += ` · ${e.details.km}km @ ${e.details?.pace}min/km`;
+    if (e.category === 'traening' && e.details?.duration) sub += ` · ${e.details.duration} min`;
     if (e.category === 'ft' && e.who) sub += ` · ${e.who}`;
     if (e.category === 'skole' && e.type) sub += ` · ${e.type}`;
     if (e.category === 'arbejde' && e.type === 'Ishockeydommer') sub += ` · Honorar: ${e.honorar||0} kr · Kørsel: ${e.koersel||0} kr`;
@@ -1368,6 +1480,44 @@ function renderDash() {
       <div style="font-size:14px;color:var(--text2);margin-top:2px">${DAY_NAMES_FULL[d.getDay()===0?6:d.getDay()-1]}, ${d.getDate()}. ${MONTHS[d.getMonth()]} ${d.getFullYear()}</div>
     </div>
 
+    ${(() => {
+      // Backup-påmindelse hvis sidste eksport er >14 dage gammel (og ikke udskudt)
+      const last = localStorage.getItem('lastExport');
+      const snooze = localStorage.getItem('backupSnooze');
+      if (snooze && snooze >= today) return '';
+      const days = last ? Math.floor((Date.now() - new Date(last + 'T12:00:00')) / 86400000) : null;
+      if (last && days < 14) return '';
+      return `<div class="card" style="margin-bottom:10px;border-color:var(--orange)">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:20px">💾</span>
+          <div style="flex:1">
+            <div style="font-size:14px;font-weight:600">Husk backup!</div>
+            <div style="font-size:12px;color:var(--text2)">${last ? 'Sidst eksporteret for ' + days + ' dage siden' : 'Du har aldrig eksporteret dine data'}</div>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="exportData();renderDash()">Eksportér</button>
+          <button class="btn btn-ghost btn-sm" onclick="localStorage.setItem('backupSnooze', dateStr(new Date(Date.now()+3*86400000)));renderDash()">Senere</button>
+        </div>
+      </div>`;
+    })()}
+
+    ${(() => {
+      // Næste aftale-nedtælling
+      const nowMin = d.getHours() * 60 + d.getMinutes();
+      const igangv = events.find(e => timeToMin(e.startTime) <= nowMin && timeToMin(e.endTime) > nowMin);
+      if (igangv) return `<div class="card" style="margin-bottom:10px;border-color:${colorMap[igangv.category]||'var(--accent)'}">
+        <div style="font-size:12px;color:var(--text2);margin-bottom:2px">Lige nu</div>
+        <div style="font-size:16px;font-weight:700">${igangv.title} <span style="font-size:13px;color:var(--text2);font-weight:400">— til kl. ${igangv.endTime}</span></div>
+      </div>`;
+      const next = events.find(e => timeToMin(e.startTime) > nowMin);
+      if (!next) return '';
+      const diff = timeToMin(next.startTime) - nowMin;
+      const om = diff >= 60 ? `${Math.floor(diff/60)}t ${diff%60 > 0 ? diff%60 + ' min' : ''}`.trim() : `${diff} min`;
+      return `<div class="card" style="margin-bottom:10px">
+        <div style="font-size:12px;color:var(--text2);margin-bottom:2px">Næste aftale</div>
+        <div style="font-size:16px;font-weight:700">${next.title} <span style="font-size:13px;color:var(--accent);font-weight:600">om ${om}</span></div>
+      </div>`;
+    })()}
+
     ${habits.length > 0 ? `<div class="card" style="margin-bottom:10px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
         <span style="font-weight:700">🔥 Habits i dag</span>
@@ -1409,11 +1559,24 @@ function renderDash() {
       const domKr = domEv.reduce((s,e)=>s+(e.honorar||0)+(e.koersel||0),0);
       const totalInd = Math.round(elHrs*ELEKTRIKER_RATE + domKr);
       if (totalInd === 0) return '';
+      // Efter skat-estimat hvis trækprocent er sat
+      const skat = getSkat();
+      let nettoLinje = '';
+      if (skat.pct !== null && skat.pct !== undefined && skat.pct !== '') {
+        const domHonKun = domEv.reduce((s,e)=>s+(e.honorar||0),0);
+        const domKrsKun = domEv.reduce((s,e)=>s+(e.koersel||0),0);
+        const brutto = elHrs*ELEKTRIKER_RATE + domHonKun;
+        const am = brutto*0.08;
+        const grundlag = Math.max(0, brutto - am - (skat.fradrag||0));
+        const nettoEst = Math.round(brutto - am - grundlag*skat.pct/100 + domKrsKun);
+        nettoLinje = `<div style="font-size:13px;color:var(--green);margin-top:4px">≈ ${nettoEst.toLocaleString('da-DK')} kr efter skat</div>`;
+      }
       return `<div class="card" style="margin-bottom:10px">
         <div style="display:flex;justify-content:space-between;align-items:center">
           <span style="font-weight:700">💰 Estimeret indtægt — denne måned</span>
           <span style="font-size:20px;font-weight:800;color:var(--green)">${totalInd.toLocaleString('da-DK')} kr</span>
         </div>
+        ${nettoLinje}
         <div style="font-size:12px;color:var(--text2);margin-top:6px;display:flex;gap:12px">
           ${elHrs>0?`<span>⚡ ${fmtH(elHrs)} elektriker</span>`:''}
           ${domKr>0?`<span>🏒 ${domEv.length} kampe dommer</span>`:''}
@@ -1505,6 +1668,15 @@ function changePlanerWeek(dir) {
 function selectPlanerDay(ds) {
   window.planerSelectedDay = ds;
   renderPlanerDay(ds);
+}
+
+function addFromPlaner(cat) {
+  closeModal('modal-add-choose');
+  const modalMap = { traening:'modal-training', skole:'modal-school', ft:'modal-ft', arbejde:'modal-arbejde' };
+  const selMap = { traening:'tr-date', skole:'sc-date', ft:'ft-date', arbejde:'arb-date' };
+  openModal(modalMap[cat]);
+  // Forudvælg den dag der er valgt i Planer-ugen
+  populateDateSelect(selMap[cat], window.planerSelectedDay || todayStr());
 }
 
 function renderPlanerDay(ds) {
@@ -1626,6 +1798,7 @@ function saveArbejde() {
   closeModal('modal-arbejde');
   renderArbejdeWeek();
   if (currentView === 'overblik') renderOverblik();
+  if (currentView === 'planer') renderPlaner();
   document.getElementById('arb-title').value = '';
   document.getElementById('arb-note').value = '';
   document.getElementById('arb-honorar').value = '';
@@ -1807,10 +1980,12 @@ function renderTracker() {
   // --- SKOLE (denne måned) ---
   const skoleEv = events.filter(e => e.category === 'skole' && e.date >= mStart && e.date <= mEnd);
   const skoleTotal = skoleEv.reduce((s, e) => s + getDurationHours(e.startTime, e.endTime), 0);
-  const skoleByType = { 'forelæsning': 0, 'lektier': 0, 'opgave': 0 };
-  skoleEv.forEach(e => {
-    const t = (e.type || '').toLowerCase();
-    if (skoleByType.hasOwnProperty(t)) skoleByType[t] += getDurationHours(e.startTime, e.endTime);
+  // Dynamisk: alle skole-kategorier + typer der findes i data
+  const skoleTypes = [...new Set([...getCats('sc').map(c => c.val), ...skoleEv.map(e => e.type).filter(Boolean)])];
+  const skoleByType = {};
+  skoleTypes.forEach(t => {
+    skoleByType[t] = skoleEv.filter(e => (e.type || '') === t)
+      .reduce((s, e) => s + getDurationHours(e.startTime, e.endTime), 0);
   });
 
   // --- TRÆNING (denne måned) ---
@@ -1827,7 +2002,8 @@ function renderTracker() {
   // --- FT (denne måned) ---
   const ftEv = events.filter(e => e.category === 'ft' && e.date >= mStart && e.date <= mEnd);
   const ftHours = ftEv.reduce((s, e) => s + getDurationHours(e.startTime, e.endTime), 0);
-  const FT_HVEM = ['Familie', 'Caroline', 'Venner', 'Andet'];
+  // Dynamisk: alle FT-kategorier + personer der findes i data
+  const FT_HVEM = [...new Set([...getCats('ft').map(c => c.val), ...ftEv.map(e => e.who).filter(Boolean)])];
   const ftByHvem = {};
   FT_HVEM.forEach(h => {
     const sub = ftEv.filter(e => e.who === h);
@@ -1886,9 +2062,8 @@ function renderTracker() {
         <span style="font-size:20px;font-weight:800;color:var(--purple)">${fmtH(skoleTotal)}</span>
       </div>
       ${skoleTotal > 0 ? `<div style="display:flex;flex-direction:column;gap:8px;font-size:13px">
-        <div><div style="display:flex;justify-content:space-between"><span style="color:var(--text2)">📖 Forelæsning</span><span style="font-weight:600">${fmtH(skoleByType['forelæsning'])}</span></div>${bar(skoleByType['forelæsning'],skoleTotal,'#bf5af2')}</div>
-        <div><div style="display:flex;justify-content:space-between"><span style="color:var(--text2)">✏️ Lektier</span><span style="font-weight:600">${fmtH(skoleByType['lektier'])}</span></div>${bar(skoleByType['lektier'],skoleTotal,'#a855f7')}</div>
-        <div><div style="display:flex;justify-content:space-between"><span style="color:var(--text2)">📝 Opgave</span><span style="font-weight:600">${fmtH(skoleByType['opgave'])}</span></div>${bar(skoleByType['opgave'],skoleTotal,'#7c3aed')}</div>
+        ${skoleTypes.filter(t => skoleByType[t] > 0).map(t => `
+        <div><div style="display:flex;justify-content:space-between"><span style="color:var(--text2)">${catLabel('sc', t)}</span><span style="font-weight:600">${fmtH(skoleByType[t])}</span></div>${bar(skoleByType[t],skoleTotal,catColor('sc', t))}</div>`).join('')}
       </div>` : `<div style="font-size:13px;color:var(--text2)">Ingen skoletimer denne måned</div>`}
     </div>
 
@@ -1930,10 +2105,10 @@ function renderTracker() {
       ${ftEv.length > 0 ? `<div style="display:flex;flex-direction:column;gap:8px;font-size:13px">
         ${FT_HVEM.map(h => ftByHvem[h].count > 0 ? `<div>
           <div style="display:flex;justify-content:space-between">
-            <span style="color:var(--text2)">${h}</span>
+            <span style="color:var(--text2)">${catLabel('ft', h)}</span>
             <span style="font-weight:600">${ftByHvem[h].count} × · ${fmtH(ftByHvem[h].hours)}</span>
           </div>
-          ${bar(ftByHvem[h].hours, ftHours, '#ff9f0a')}
+          ${bar(ftByHvem[h].hours, ftHours, catColor('ft', h))}
         </div>` : '').join('')}
       </div>` : `<div style="font-size:13px;color:var(--text2)">Ingen FT-aftaler denne måned</div>`}
     </div>
@@ -1995,7 +2170,7 @@ function exportData() {
   const extra = {};
   for (let i = 0; i < localStorage.length; i++) {
     const k = localStorage.key(i);
-    if (k.startsWith('hd_') || k.startsWith('maal_') || k.startsWith('indkoebMaal_') || k.startsWith('lonPaid_')) {
+    if (k.startsWith('hd_') || k.startsWith('maal_') || k.startsWith('indkoebMaal_') || k.startsWith('lonPaid_') || k.startsWith('cats_') || k === 'skat') {
       extra[k] = localStorage.getItem(k);
     }
   }
@@ -2017,6 +2192,7 @@ function exportData() {
   a.download = `MinApp_data_${dato}.json`;
   a.click();
   URL.revokeObjectURL(url);
+  localStorage.setItem('lastExport', todayStr());
 }
 
 function importData(event) {
@@ -2049,7 +2225,6 @@ function importData(event) {
 }
 
 // ===================== TODOS =====================
-const PROJECT_COLORS = { Inbox:'#9a9a9a', Personlig:'#4f8ef7', Skole:'#bf5af2', Arbejde:'#34c759' };
 const PRIORITY_COLORS = { 1:'#ff453a', 2:'#ff9f0a', 3:'#4f8ef7', 4:'#9a9a9a' };
 let editingTodoId = null;
 let todoFilter = 'Alle';
@@ -2063,14 +2238,14 @@ function openTodoModal(id = null) {
     document.getElementById('td-note').value = t.note || '';
     document.getElementById('td-date').value = t.dueDate || '';
     document.getElementById('td-priority').value = t.priority || 4;
-    setTagByVal('td-project-row', t.project || 'Inbox', PROJECT_COLORS[t.project] || '#9a9a9a');
+    renderTagRow('td-project-row', 'td', t.project || 'Inbox');
     document.querySelector('#modal-todo h2').textContent = 'Redigér opgave';
   } else {
     document.getElementById('td-title').value = document.getElementById('todo-quick-input').value || '';
     document.getElementById('td-note').value = '';
     document.getElementById('td-date').value = '';
     document.getElementById('td-priority').value = 4;
-    setTagByVal('td-project-row', 'Inbox', '#9a9a9a');
+    renderTagRow('td-project-row', 'td', 'Inbox');
     document.querySelector('#modal-todo h2').textContent = 'Tilføj opgave';
   }
   openModal('modal-todo');
@@ -2136,7 +2311,7 @@ function dueDateLabel(ds) {
 }
 
 function renderTodos() {
-  const projects = ['Alle', ...Object.keys(PROJECT_COLORS)];
+  const projects = ['Alle', ...getCats('td').map(c => c.val)];
   const filterEl = document.getElementById('todo-project-filter');
   filterEl.innerHTML = projects.map(p => `
     <button onclick="todoFilter='${p}';renderTodos()" style="background:${todoFilter===p?'var(--accent)':'var(--bg3)'};color:${todoFilter===p?'#fff':'var(--text2)'};border:none;padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap">${p}</button>
@@ -2160,7 +2335,7 @@ function renderTodos() {
   ];
 
   function todoHTML(t) {
-    const pc = PROJECT_COLORS[t.project] || '#9a9a9a';
+    const pc = catColor('td', t.project);
     const prio = t.priority || 4;
     const due = dueDateLabel(t.dueDate);
     return `<div class="todo-item" id="todo-${t.id}">
@@ -2354,6 +2529,20 @@ function saveMaalGoal(key, mo) {
 // ===================== ØKONOMI =====================
 let okoSelectedMonth = null;
 
+function getSkat() {
+  try { return JSON.parse(localStorage.getItem('skat') || '{"pct":null,"fradrag":0}'); }
+  catch { return { pct: null, fradrag: 0 }; }
+}
+
+function saveSkat() {
+  const pct = parseFloat(document.getElementById('skat-pct').value);
+  const fradrag = parseFloat(document.getElementById('skat-fradrag').value) || 0;
+  if (isNaN(pct) || pct < 0 || pct > 100) { alert('Indtast en trækprocent mellem 0 og 100'); return; }
+  localStorage.setItem('skat', JSON.stringify({ pct, fradrag }));
+  renderOkonomi();
+  if (currentView === 'overblik') renderOverblik();
+}
+
 function renderOkonomi() {
   const allMonths = new Set();
   DB.events().forEach(e => allMonths.add(e.date.slice(0,7)));
@@ -2384,23 +2573,51 @@ function renderOkonomi() {
   const domKrs = domEv.reduce((s,e)=>s+(e.koersel||0),0);
 
   const totalIndtaegt = elLon + domHon + domKrs;
+
+  // --- SKAT ---
+  // Kørsel er skattefri godtgørelse — kun elektrikerløn + honorar beskattes
+  const skat = getSkat();
+  const brutto = elLon + domHon;
+  const am = brutto * 0.08; // AM-bidrag 8%
+  const grundlag = Math.max(0, brutto - am - (skat.fradrag || 0));
+  const askat = skat.pct ? grundlag * skat.pct / 100 : 0;
+  const nettoLon = brutto - am - askat + domKrs;
+  const harSkat = skat.pct !== null && skat.pct !== undefined && skat.pct !== '';
+
   const indkoebU = DB.indkoeb().filter(e=>e.date.startsWith(mo)).reduce((s,e)=>s+e.amount,0);
   const braendstofU = DB.fuel().filter(e=>e.date.startsWith(mo)).reduce((s,e)=>s+e.amount,0);
   const totalUdgifter = indkoebU + braendstofU;
-  const netto = totalIndtaegt - totalUdgifter;
+  const netto = (harSkat ? nettoLon : totalIndtaegt) - totalUdgifter;
 
   document.getElementById('oko-content').innerHTML = `
     <div class="net-box">
       <div class="net-val" style="color:${netto>=0?'var(--green)':'var(--red)'}">${netto>=0?'+':''}${Math.round(netto).toLocaleString('da-DK')} kr</div>
-      <div class="net-lbl">Netto — ${MONTHS[parseInt(mIdx)-1]} ${y}</div>
+      <div class="net-lbl">Netto${harSkat?' (efter skat)':''} — ${MONTHS[parseInt(mIdx)-1]} ${y}</div>
     </div>
     <div class="card oko-section">
       <div class="card-title" style="color:var(--green)">💰 Indtægt</div>
       ${elHrs>0?`<div class="oko-row"><span class="lbl">⚡ Elektriker (${fmtH(elHrs)})</span><span class="val" style="color:var(--green)">${fmtKr(elLon)}</span></div>`:''}
       ${domHon>0?`<div class="oko-row"><span class="lbl">🏒 Dommer honorar (${domEv.length} kampe)</span><span class="val" style="color:var(--green)">${fmtKr(domHon)}</span></div>`:''}
-      ${domKrs>0?`<div class="oko-row"><span class="lbl">🚗 Dommer kørsel</span><span class="val" style="color:var(--green)">${fmtKr(domKrs)}</span></div>`:''}
+      ${domKrs>0?`<div class="oko-row"><span class="lbl">🚗 Dommer kørsel (skattefri)</span><span class="val" style="color:var(--green)">${fmtKr(domKrs)}</span></div>`:''}
       ${totalIndtaegt===0?`<div style="font-size:13px;color:var(--text2)">Ingen registreret indtægt</div>`:''}
-      <div class="oko-row" style="margin-top:4px"><span class="lbl" style="font-weight:700">Total</span><span class="val" style="color:var(--green);font-size:17px">${fmtKr(totalIndtaegt)}</span></div>
+      <div class="oko-row" style="margin-top:4px"><span class="lbl" style="font-weight:700">Total brutto</span><span class="val" style="color:var(--green);font-size:17px">${fmtKr(totalIndtaegt)}</span></div>
+    </div>
+    <div class="card oko-section">
+      <div class="card-title">🧾 Skat & nettoløn</div>
+      ${harSkat && brutto > 0 ? `
+        <div class="oko-row"><span class="lbl">Brutto (skattepligtig)</span><span class="val">${fmtKr(brutto)}</span></div>
+        <div class="oko-row"><span class="lbl">AM-bidrag (8%)</span><span class="val" style="color:var(--red)">−${fmtKr(am)}</span></div>
+        <div class="oko-row"><span class="lbl">Månedsfradrag</span><span class="val">${fmtKr(skat.fradrag || 0)}</span></div>
+        <div class="oko-row"><span class="lbl">A-skat (${skat.pct}% af ${fmtKr(grundlag)})</span><span class="val" style="color:var(--red)">−${fmtKr(askat)}</span></div>
+        ${domKrs>0?`<div class="oko-row"><span class="lbl">+ Skattefri kørsel</span><span class="val" style="color:var(--green)">+${fmtKr(domKrs)}</span></div>`:''}
+        <div class="oko-row" style="margin-top:4px"><span class="lbl" style="font-weight:700">Estimeret udbetalt</span><span class="val" style="color:var(--green);font-size:17px">${fmtKr(nettoLon)}</span></div>
+      ` : `<div style="font-size:13px;color:var(--text2);margin-bottom:4px">${brutto>0?'Indtast trækprocent og fradrag for at se nettoløn':'Ingen skattepligtig indtægt denne måned'}</div>`}
+      <div style="display:flex;gap:8px;margin-top:12px;align-items:center">
+        <input type="number" id="skat-pct" placeholder="Træk-%" value="${skat.pct ?? ''}" style="flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:14px;padding:9px 12px;outline:none;font-family:inherit">
+        <input type="number" id="skat-fradrag" placeholder="Fradrag/md" value="${skat.fradrag || ''}" style="flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:14px;padding:9px 12px;outline:none;font-family:inherit">
+        <button class="btn btn-primary btn-sm" style="white-space:nowrap" onclick="saveSkat()">Gem</button>
+      </div>
+      <div style="font-size:11px;color:var(--text2);margin-top:8px">Find trækprocent og månedsfradrag på dit skattekort (skat.dk → Forskudsopgørelse)</div>
     </div>
     <div class="card oko-section">
       <div class="card-title" style="color:var(--red)">💸 Udgifter</div>
@@ -2517,6 +2734,12 @@ function initAuth() {
 initAuth();
 updateWeekLabel();
 renderOverblik();
+renderMaal();
+
+// PWA: service worker giver offline-adgang (kun på https, dvs. den live app)
+if ('serviceWorker' in navigator && location.protocol === 'https:') {
+  navigator.serviceWorker.register('./sw.js').catch(() => {});
+}
 </script>
 </body>
 </html>
