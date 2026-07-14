@@ -286,6 +286,27 @@
   .maal-sub { font-size:12px; color:var(--text2); margin-top:6px; }
   .maal-input-row { display:flex; gap:8px; margin-top:10px; align-items:center; }
   .maal-input-row input { flex:1; background:var(--bg3); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-size:14px; padding:9px 12px; outline:none; font-family:inherit; }
+
+  /* GAMIFICATION (XP / LEVELS) */
+  .bar-track { height:6px; background:rgba(255,255,255,0.06); border-radius:3px; overflow:hidden; }
+  .bar-fill { height:100%; border-radius:3px; transition:width .4s cubic-bezier(.22,1,.36,1); box-shadow:0 0 12px -2px currentColor; }
+  .card-raised { background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius); padding:14px 16px; }
+  .xp-banner { display:flex; align-items:center; gap:14px; margin-bottom:14px; cursor:pointer; }
+  .xp-ring { width:46px; height:46px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:18px; color:#fff; background:var(--accent); box-shadow:0 0 0 3px rgba(255,255,255,0.06), 0 0 18px -2px var(--accent); font-variant-numeric:tabular-nums; }
+  .xp-banner.xp-gold { box-shadow:0 0 0 1px var(--orange), 0 0 26px -8px var(--orange); }
+  .xp-banner.xp-prime .xp-ring { background:linear-gradient(135deg,#ff375f,#ff9f0a,#ffd60a,#4f8ef7); background-size:300% 300%; animation:primeGrad 4s ease infinite; }
+  @keyframes primeGrad { 0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%} }
+  .levelup-overlay { position:fixed; inset:0; z-index:200; background:rgba(0,0,0,0.78); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); display:flex; align-items:center; justify-content:center; overflow:hidden; animation:fadeIn .25s ease; }
+  @keyframes fadeIn { from{opacity:0} }
+  .levelup-card { text-align:center; padding:32px 40px; animation:popIn .4s cubic-bezier(.22,1.4,.36,1); }
+  @keyframes popIn { from{opacity:0; transform:scale(.8)} }
+  .confetti { position:absolute; top:-24px; width:9px; height:14px; border-radius:2px; animation:confettiFall linear forwards; }
+  @keyframes confettiFall { to { transform:translateY(108vh) rotate(720deg); opacity:.25; } }
+  .xp-title-row { display:flex; align-items:center; justify-content:space-between; padding:9px 0; border-bottom:1px solid var(--border); }
+  .xp-title-row:last-child { border-bottom:none; }
+  .xp-color { width:34px; height:34px; border-radius:50%; cursor:pointer; border:2px solid transparent; display:flex; align-items:center; justify-content:center; font-size:13px; }
+  .xp-color.locked { cursor:default; opacity:0.35; }
+  .xp-color.active { border-color:#fff; }
 </style>
 </head>
 <body>
@@ -683,6 +704,15 @@
     </div>
     <button class="btn btn-primary" onclick="saveHabit()">Gem</button>
     <button class="btn btn-ghost" style="margin-top:8px" onclick="closeModal('modal-habit')">Annuller</button>
+  </div>
+</div>
+
+<!-- XP MODAL -->
+<div class="modal-overlay" id="modal-xp">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div id="xp-modal-body"></div>
+    <button class="btn btn-ghost" style="margin-top:12px" onclick="closeModal('modal-xp')">Luk</button>
   </div>
 </div>
 
@@ -1476,7 +1506,32 @@ function renderDash() {
 
   const el = document.getElementById('overblik-dash');
   el.innerHTML = `
-    <div style="padding:8px 0 16px">
+    ${(() => {
+      const xp = computeXP();
+      const li = levelInfo(xp);
+      const today7 = computeXP(dateStr(new Date(Date.now()-6*86400000)), todayStr());
+      const prev7 = computeXP(dateStr(new Date(Date.now()-13*86400000)), dateStr(new Date(Date.now()-7*86400000)));
+      const momentum = today7 >= prev7
+        ? `<span style="color:var(--green);font-size:11px">↗ ${today7} XP</span>`
+        : `<span style="color:var(--orange);font-size:11px">↘ ${today7} XP</span>`;
+      const special = li.level >= 30 ? 'xp-prime' : li.level >= 25 ? 'xp-gold' : '';
+      return `<div class="xp-banner card-raised ${special}" onclick="openXPModal()">
+        <div class="xp-ring">${li.level}</div>
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">
+            <span style="font-weight:700;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${li.emoji} ${li.title}</span>
+            <span style="font-size:11px;color:var(--text2);white-space:nowrap">${li.xpIntoLevel} / ${li.xpForNext} XP</span>
+          </div>
+          <div class="bar-track" style="margin-top:7px;color:var(--accent)"><div class="bar-fill" style="width:${li.pct}%;background:currentColor"></div></div>
+        </div>
+        <div style="text-align:right;min-width:50px">
+          <div style="font-weight:800;color:var(--accent);font-size:15px;font-variant-numeric:tabular-nums">+${xpToday()}</div>
+          ${momentum}
+        </div>
+      </div>`;
+    })()}
+
+    <div style="padding:0 0 16px">
       <div style="font-size:22px;font-weight:800">${greeting}, Gustav 👋</div>
       <div style="font-size:14px;color:var(--text2);margin-top:2px">${DAY_NAMES_FULL[d.getDay()===0?6:d.getDay()-1]}, ${d.getDate()}. ${MONTHS[d.getMonth()]} ${d.getFullYear()}</div>
     </div>
@@ -1597,6 +1652,7 @@ function renderDash() {
           </div>`).join('')}
     </div>
   `;
+  checkLevelUp();
 }
 
 // ===================== RENDER PLANER =====================
@@ -2172,7 +2228,7 @@ function exportData() {
   const extra = {};
   for (let i = 0; i < localStorage.length; i++) {
     const k = localStorage.key(i);
-    if (k.startsWith('hd_') || k.startsWith('maal_') || k.startsWith('indkoebMaal_') || k.startsWith('lonPaid_') || k.startsWith('cats_') || k === 'skat') {
+    if (k.startsWith('hd_') || k.startsWith('maal_') || k.startsWith('indkoebMaal_') || k.startsWith('lonPaid_') || k.startsWith('cats_') || k === 'skat' || k === 'lastSeenLevel' || k === 'xpAccent') {
       extra[k] = localStorage.getItem(k);
     }
   }
@@ -2217,6 +2273,7 @@ function importData(event) {
         Object.entries(data.extra).forEach(([k, v]) => localStorage.setItem(k, v));
       }
       document.getElementById('import-status').textContent = `✅ Data indlæst — ${data.fuel.length} tankninger, ${data.events.length} aftaler, ${(data.indkoeb||[]).length} indkøb, ${(data.todos||[]).length} todos.`;
+      applyAccent();
       renderOverblik();
     } catch {
       document.getElementById('import-status').textContent = '❌ Kunne ikke læse filen.';
@@ -2710,6 +2767,210 @@ function renderStatCharts() {
   </div>`;
 }
 
+// ===================== GAMIFICATION (XP / LEVELS) =====================
+// XP beregnes ALTID deterministisk fra eksisterende data (events, todos, habits).
+// Ingen separat XP-saldo gemmes → retroaktiv XP, ingen sync-fejl, un-toggle fjerner XP.
+const XP_TITLES = [
+  { level:1,  emoji:'🌱', title:'Rookie' },
+  { level:3,  emoji:'🔧', title:'Lærling' },
+  { level:5,  emoji:'⚡', title:'Ingeniørspire' },
+  { level:8,  emoji:'🎯', title:'Fast i sadlen' },
+  { level:12, emoji:'🔥', title:'Maskinen' },
+  { level:16, emoji:'🏒', title:'Kaptajnen' },
+  { level:20, emoji:'🏆', title:'Elite' },
+  { level:25, emoji:'👑', title:'Legenden' },
+  { level:30, emoji:'🚀', title:'Gustav Prime' },
+];
+// Accentfarver der låses op ved levels (visuelle unlocks)
+const XP_COLORS = [
+  { hex:'#4f8ef7', name:'Blå',    level:1 },
+  { hex:'#30d158', name:'Grøn',   level:3 },
+  { hex:'#bf5af2', name:'Lilla',  level:5 },
+  { hex:'#ff9f0a', name:'Orange', level:8 },
+  { hex:'#ff375f', name:'Pink',   level:12 },
+  { hex:'#30b0c7', name:'Cyan',   level:16 },
+  { hex:'#ffd60a', name:'Guld',   level:20 },
+];
+
+function xpForTraining(e) {
+  const mins = getDurationHours(e.startTime, e.endTime) * 60;
+  let xp = 30 + Math.min(24, Math.floor(mins / 5));
+  if (e.type === 'run' && e.details?.km) xp += Math.round(3 * e.details.km);
+  return xp;
+}
+
+// XP fordelt på kilder i et datointerval (inkl.). null = alt.
+function xpBreakdown(fromDate = null, toDate = null) {
+  const inRange = ds => (!fromDate || ds >= fromDate) && (!toDate || ds <= toDate);
+  let tr = 0, td = 0, hb = 0;
+
+  DB.events().filter(e => e.category === 'traening' && inRange(e.date))
+    .forEach(e => { tr += xpForTraining(e); });
+
+  DB.todos().filter(t => t.completed).forEach(t => {
+    const ds = (t.completedAt || '').slice(0,10) || t.dueDate || null;
+    // Uden dato: kun med i total (når intet interval er sat)
+    if (ds ? inRange(ds) : (!fromDate && !toDate)) {
+      const p = t.priority || 4;
+      td += p === 1 ? 25 : p === 2 ? 15 : 10;
+    }
+  });
+
+  const habitIds = new Set(DB.habitDefs().map(h => h.id));
+  const hasHabits = habitIds.size > 0;
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (!k || !k.startsWith('hd_')) continue;
+    const ds = k.slice(3);
+    if (!inRange(ds)) continue;
+    let done;
+    try { done = JSON.parse(localStorage.getItem(k)) || []; } catch { continue; }
+    const valid = done.filter(id => habitIds.has(id));
+    hb += valid.length * 10;
+    if (hasHabits && valid.length === habitIds.size && valid.length > 0) hb += 15;
+  }
+  return { tr, td, hb, total: tr + td + hb };
+}
+
+function computeXP(fromDate = null, toDate = null) { return xpBreakdown(fromDate, toDate).total; }
+function xpToday() { return computeXP(todayStr(), todayStr()); }
+
+function levelInfo(xp) {
+  const level = Math.floor(Math.sqrt(xp / 50)) + 1;
+  const floorXP = 50 * (level - 1) ** 2;
+  const nextXP = 50 * level ** 2;
+  const span = nextXP - floorXP;
+  const into = xp - floorXP;
+  let t = XP_TITLES[0];
+  for (const row of XP_TITLES) if (level >= row.level) t = row;
+  return { level, title: t.title, emoji: t.emoji, xpIntoLevel: into, xpForNext: span, pct: Math.round(into/span*100), totalXP: xp };
+}
+
+function applyAccent() {
+  const c = localStorage.getItem('xpAccent') || '#4f8ef7';
+  document.documentElement.style.setProperty('--accent', c);
+}
+
+// Level-up-detektion — fejrer KUN når level stiger over sidst sete (aldrig ved førstegangs-init)
+function checkLevelUp() {
+  const lvl = levelInfo(computeXP()).level;
+  const seenRaw = localStorage.getItem('lastSeenLevel');
+  if (seenRaw === null) { localStorage.setItem('lastSeenLevel', String(lvl)); return; }
+  const seen = parseInt(seenRaw);
+  if (lvl > seen) { showLevelUp(seen, lvl); localStorage.setItem('lastSeenLevel', String(lvl)); }
+  else if (lvl < seen) { localStorage.setItem('lastSeenLevel', String(lvl)); }
+}
+
+function showLevelUp(from, to) {
+  const li = levelInfo(50 * (to - 1) ** 2);
+  const newTitle = XP_TITLES.find(r => r.level === to);
+  const newColor = XP_COLORS.find(c => c.level === to);
+  const overlay = document.createElement('div');
+  overlay.className = 'levelup-overlay';
+  overlay.onclick = () => overlay.remove();
+  const colors = ['#4f8ef7','#30d158','#ff9f0a','#bf5af2','#ff375f','#ffd60a'];
+  let confetti = '';
+  for (let i = 0; i < 22; i++) {
+    confetti += `<span class="confetti" style="left:${Math.random()*100}%;background:${colors[i%colors.length]};animation-delay:${Math.random()*0.4}s;animation-duration:${1.2+Math.random()*0.8}s"></span>`;
+  }
+  overlay.innerHTML = `${confetti}
+    <div class="levelup-card">
+      <div style="font-size:52px">${li.emoji}</div>
+      <div style="font-size:12px;color:var(--text2);letter-spacing:1.5px;text-transform:uppercase;margin-top:10px">Level up</div>
+      <div style="font-size:34px;font-weight:800;margin:4px 0">${from} → ${to}</div>
+      ${newTitle ? `<div style="font-size:16px;color:var(--accent);font-weight:700">Du er nu ${li.emoji} ${li.title}</div>` : ''}
+      ${newColor ? `<div style="font-size:13px;color:var(--text2);margin-top:8px">🎨 Ny farve låst op: ${newColor.name}</div>` : ''}
+      <div style="font-size:12px;color:var(--text2);margin-top:18px">Tryk for at lukke</div>
+    </div>`;
+  document.body.appendChild(overlay);
+}
+
+function selectAccent(hex, reqLevel) {
+  const lvl = levelInfo(computeXP()).level;
+  if (lvl < reqLevel) return; // låst
+  localStorage.setItem('xpAccent', hex);
+  applyAccent();
+  openXPModal();
+  renderDash();
+}
+
+function openXPModal() {
+  const xp = computeXP();
+  const li = levelInfo(xp);
+  const bd = xpBreakdown();
+  const days7 = Array.from({length:7}, (_,i) => dateStr(new Date(Date.now() - (6-i)*86400000)));
+  const dayLbls = ['M','T','O','T','F','L','S'];
+  const dayXP = days7.map(ds => computeXP(ds, ds));
+  const maxD = Math.max(...dayXP, 1);
+  const accent = localStorage.getItem('xpAccent') || '#4f8ef7';
+  const curLevel = li.level;
+
+  const srcRow = (emoji, label, val, color) => {
+    const pct = bd.total > 0 ? Math.round(val/bd.total*100) : 0;
+    return `<div style="margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px">
+        <span style="color:var(--text2)">${emoji} ${label}</span>
+        <span style="font-weight:600">${val} XP</span>
+      </div>
+      <div class="bar-track" style="color:${color}"><div class="bar-fill" style="width:${pct}%;background:currentColor"></div></div>
+    </div>`;
+  };
+
+  document.getElementById('xp-modal-body').innerHTML = `
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:18px">
+      <div class="xp-ring" style="width:56px;height:56px;font-size:22px">${li.level}</div>
+      <div>
+        <div style="font-size:20px;font-weight:800">${li.emoji} ${li.title}</div>
+        <div style="font-size:13px;color:var(--text2)">${li.totalXP.toLocaleString('da-DK')} XP i alt · ${li.xpForNext - li.xpIntoLevel} XP til level ${li.level+1}</div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:12px">
+      <div class="card-title">XP-kilder</div>
+      ${srcRow('🏒','Træning',bd.tr,'#4f8ef7')}
+      ${srcRow('🔥','Habits',bd.hb,'#ff375f')}
+      ${srcRow('✅','Todos',bd.td,'#30d158')}
+    </div>
+
+    <div class="card" style="margin-bottom:12px">
+      <div class="card-title">Sidste 7 dage</div>
+      <div style="display:flex;gap:6px;align-items:flex-end;height:70px">
+        ${dayXP.map(v => `<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:3px">
+          ${v>0?`<span style="font-size:9px;color:var(--text2)">${v}</span>`:''}
+          <div style="width:100%;background:var(--accent);border-radius:3px 3px 0 0;height:${Math.round(v/maxD*100)}%;min-height:${v>0?3:0}px;opacity:.85"></div>
+        </div>`).join('')}
+      </div>
+      <div style="display:flex;gap:6px;margin-top:4px">
+        ${days7.map((ds,i) => `<div style="flex:1;font-size:9px;color:${ds===todayStr()?'var(--accent)':'var(--text2)'};text-align:center;font-weight:${ds===todayStr()?'700':'400'}">${dayLbls[(new Date(ds+'T12:00:00').getDay()+6)%7]}</div>`).join('')}
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:12px">
+      <div class="card-title">🎨 Accentfarve</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        ${XP_COLORS.map(c => {
+          const locked = curLevel < c.level;
+          const active = accent.toLowerCase() === c.hex.toLowerCase();
+          return `<div class="xp-color ${locked?'locked':''} ${active?'active':''}" style="background:${c.hex}" title="${c.name}${locked?' (Lvl '+c.level+')':''}" onclick="selectAccent('${c.hex}',${c.level})">${locked?'🔒':(active?'✓':'')}</div>`;
+        }).join('')}
+      </div>
+      <div style="font-size:11px;color:var(--text2);margin-top:8px">Låste farver åbnes når du når det viste level.</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Titler</div>
+      ${XP_TITLES.map(r => {
+        const reached = curLevel >= r.level;
+        return `<div class="xp-title-row">
+          <span style="font-size:14px;${reached?'':'opacity:.4'}">${r.emoji} ${r.title}</span>
+          <span style="font-size:12px;color:${reached?'var(--green)':'var(--text2)'}">${reached?'✓ Level '+r.level:'🔒 Level '+r.level}</span>
+        </div>`;
+      }).join('')}
+    </div>
+  `;
+  document.getElementById('modal-xp').classList.add('open');
+}
+
 // ===================== LOGIN =====================
 const PW_HASH = 'b7fbb9f14ca908bf20c16e78647d36945e254a3b494982890cffb2e58cbc3d95';
 
@@ -2740,6 +3001,7 @@ function initAuth() {
 
 // ===================== INIT =====================
 initAuth();
+applyAccent();
 updateWeekLabel();
 renderOverblik();
 renderMaal();
