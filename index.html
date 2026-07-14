@@ -12,12 +12,17 @@
 <title>MinApp</title>
 <style>
   :root {
-    --bg: #0f0f0f;
-    --bg2: #1a1a1a;
-    --bg3: #252525;
-    --border: #2e2e2e;
-    --text: #f0f0f0;
-    --text2: #9a9a9a;
+    --bg: #0a0a0c;
+    --bg2: #141418;                        /* hævet solid */
+    --bg3: rgba(255,255,255,0.05);         /* indre elementer (inputs, pills, stat-box) */
+    --border: rgba(255,255,255,0.08);
+    --glass: rgba(255,255,255,0.045);      /* basis-panel */
+    --glass-raised: rgba(255,255,255,0.075);
+    --glass-modal: rgba(22,22,26,0.72);
+    --stroke: rgba(255,255,255,0.08);
+    --stroke-strong: rgba(255,255,255,0.13);
+    --text: #f2f2f4;
+    --text2: #9a9aa2;
     --accent: #4f8ef7;
     --accent2: #3a7ae0;
     --green: #30d158;
@@ -25,19 +30,31 @@
     --orange: #ff9f0a;
     --purple: #bf5af2;
     --pink: #ff375f;
-    --radius: 14px;
-    --radius-sm: 8px;
-    --nav-h: 84px;
+    --radius: 18px;
+    --radius-sm: 12px;
+    --blur: 20px;
+    --blur-heavy: 40px;
+    --nav-h: 96px;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-  html, body { height: 100%; background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif; overflow: hidden; }
+  html, body { height: 100%; background-color: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif; overflow: hidden; }
+  /* Ambient baggrundsglød — fast bag alt, reagerer på accentfarven */
+  body::before {
+    content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+    background:
+      radial-gradient(ellipse 80% 55% at 15% -10%, color-mix(in srgb, var(--accent) 9%, transparent), transparent 60%),
+      radial-gradient(ellipse 70% 50% at 100% 5%, color-mix(in srgb, var(--accent) 5%, transparent), transparent 55%),
+      radial-gradient(ellipse 90% 55% at 50% 115%, color-mix(in srgb, var(--accent) 6%, transparent), transparent 60%);
+  }
 
   /* LAYOUT */
   #app { display: flex; flex-direction: column; height: 100%; }
   #header {
     padding: env(safe-area-inset-top, 44px) 20px 12px;
-    background: var(--bg);
-    border-bottom: 1px solid var(--border);
+    background: rgba(10,10,12,0.55);
+    backdrop-filter: blur(var(--blur));
+    -webkit-backdrop-filter: blur(var(--blur));
+    border-bottom: 1px solid var(--stroke);
     display: flex; align-items: flex-end; justify-content: space-between;
     min-height: calc(env(safe-area-inset-top, 44px) + 56px);
     position: relative; z-index: 10;
@@ -51,36 +68,41 @@
 
   /* BOTTOM NAV */
   #nav {
-    position: fixed; bottom: 0; left: 0; right: 0;
-    height: var(--nav-h);
-    background: rgba(20,20,20,0.92);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border-top: 1px solid var(--border);
-    display: flex; align-items: flex-start; justify-content: flex-start;
-    overflow-x: auto; -webkit-overflow-scrolling: touch;
-    padding-top: 10px;
-    padding-bottom: env(safe-area-inset-bottom, 20px);
-    scrollbar-width: none;
+    position: fixed; left: 12px; right: 12px;
+    bottom: calc(env(safe-area-inset-bottom, 12px) + 8px);
+    height: 64px;
+    background: var(--glass-raised);
+    backdrop-filter: blur(var(--blur-heavy));
+    -webkit-backdrop-filter: blur(var(--blur-heavy));
+    border: 1px solid var(--stroke);
+    border-radius: 26px;
+    display: flex; align-items: center; justify-content: space-around;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.55);
   }
-  #nav::-webkit-scrollbar { display: none; }
   .nav-btn {
     display: flex; flex-direction: column; align-items: center; gap: 3px;
     background: none; border: none; color: var(--text2); cursor: pointer;
-    font-size: 9px; font-weight: 500; min-width: 52px; flex-shrink: 0; padding: 0 4px;
+    font-size: 10px; font-weight: 600; flex: 1; padding: 0;
     transition: color 0.15s;
   }
-  .nav-btn .icon { font-size: 20px; line-height: 1; }
+  .nav-btn .icon { font-size: 21px; line-height: 1; transition: filter 0.2s, transform 0.2s; }
   .nav-btn.active { color: var(--accent); }
+  .nav-btn.active .icon { filter: drop-shadow(0 0 8px var(--accent)); transform: translateY(-1px); }
 
   /* VIEWS */
   .view { display: none; }
-  .view.active { display: block; }
+  .view.active { display: block; animation: viewIn 0.2s ease-out; }
+  @keyframes viewIn { from { opacity: 0; transform: translateY(4px); } }
 
-  /* CARDS */
+  /* CARDS — glaspaneler */
   .card {
-    background: var(--bg2); border-radius: var(--radius);
-    border: 1px solid var(--border); padding: 16px; margin-bottom: 12px;
+    background: var(--glass);
+    backdrop-filter: blur(var(--blur));
+    -webkit-backdrop-filter: blur(var(--blur));
+    border: 1px solid var(--stroke);
+    border-radius: var(--radius);
+    padding: 16px; margin-bottom: 12px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.35);
   }
   .card-title { font-size: 13px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; }
 
@@ -118,11 +140,16 @@
   }
   .modal-overlay.open { display: flex; }
   .modal {
-    background: var(--bg2); border-radius: 20px 20px 0 0;
+    background: var(--glass-modal);
+    backdrop-filter: blur(var(--blur-heavy));
+    -webkit-backdrop-filter: blur(var(--blur-heavy));
+    border-radius: 24px 24px 0 0;
     width: 100%; padding: 20px 20px calc(env(safe-area-inset-bottom, 20px) + 20px);
     max-height: 90vh; overflow-y: auto;
-    border: 1px solid var(--border); border-bottom: none;
+    border: 1px solid var(--stroke-strong); border-bottom: none;
+    animation: modalUp 0.25s cubic-bezier(.22,1,.36,1);
   }
+  @keyframes modalUp { from { transform: translateY(16px); opacity: 0.6; } }
   .modal-handle { width: 36px; height: 4px; background: var(--border); border-radius: 2px; margin: 0 auto 16px; }
   .modal h2 { font-size: 18px; font-weight: 700; margin-bottom: 16px; }
 
@@ -290,7 +317,7 @@
   /* GAMIFICATION (XP / LEVELS) */
   .bar-track { height:6px; background:rgba(255,255,255,0.06); border-radius:3px; overflow:hidden; }
   .bar-fill { height:100%; border-radius:3px; transition:width .4s cubic-bezier(.22,1,.36,1); box-shadow:0 0 12px -2px currentColor; }
-  .card-raised { background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius); padding:14px 16px; }
+  .card-raised { background:var(--glass-raised); backdrop-filter:blur(var(--blur)); -webkit-backdrop-filter:blur(var(--blur)); border:1px solid var(--stroke); border-radius:var(--radius); padding:14px 16px; box-shadow:0 8px 32px rgba(0,0,0,.35), 0 0 60px -22px var(--accent); }
   .xp-banner { display:flex; align-items:center; gap:14px; margin-bottom:14px; cursor:pointer; }
   .xp-ring { width:46px; height:46px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:18px; color:#fff; background:var(--accent); box-shadow:0 0 0 3px rgba(255,255,255,0.06), 0 0 18px -2px var(--accent); font-variant-numeric:tabular-nums; }
   .xp-banner.xp-gold { box-shadow:0 0 0 1px var(--orange), 0 0 26px -8px var(--orange); }
@@ -307,6 +334,15 @@
   .xp-color { width:34px; height:34px; border-radius:50%; cursor:pointer; border:2px solid transparent; display:flex; align-items:center; justify-content:center; font-size:13px; }
   .xp-color.locked { cursor:default; opacity:0.35; }
   .xp-color.active { border-color:#fff; }
+
+  /* Typografi-ro: tal hopper ikke */
+  .stat-val, .net-val, .oko-row .val, .maal-row span, .todo-due { font-variant-numeric: tabular-nums; }
+  /* Taktil feedback ved tryk */
+  .todo-check:active, .habit-btn:active, .day-pill:active { transform: scale(0.94); }
+  /* Respektér systemets "reducér bevægelse" */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+  }
 </style>
 </head>
 <body>
@@ -1629,12 +1665,10 @@ function renderDash() {
         nettoLinje = `<div style="font-size:13px;color:var(--green);margin-top:4px">≈ ${nettoEst.toLocaleString('da-DK')} kr udbetalt${suFast>0?' (inkl. SU)':' efter skat'}</div>`;
       }
       return `<div class="card" style="margin-bottom:10px">
-        <div style="display:flex;justify-content:space-between;align-items:center">
-          <span style="font-weight:700">💰 Estimeret indtægt — denne måned</span>
-          <span style="font-size:20px;font-weight:800;color:var(--green)">${totalInd.toLocaleString('da-DK')} kr</span>
-        </div>
+        <div style="font-weight:700;font-size:13px;color:var(--text2)">💰 Estimeret indtægt — denne måned</div>
+        <div style="font-size:26px;font-weight:800;color:var(--green);margin-top:4px;font-variant-numeric:tabular-nums">${totalInd.toLocaleString('da-DK')} kr</div>
         ${nettoLinje}
-        <div style="font-size:12px;color:var(--text2);margin-top:6px;display:flex;gap:12px">
+        <div style="font-size:12px;color:var(--text2);margin-top:6px;display:flex;gap:12px;flex-wrap:wrap">
           ${elHrs>0?`<span>⚡ ${fmtH(elHrs)} elektriker</span>`:''}
           ${domKr>0?`<span>🏒 ${domEv.length} kampe dommer</span>`:''}
         </div>
