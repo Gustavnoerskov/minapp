@@ -6,7 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="MinApp">
-<meta name="theme-color" content="#0f0f0f">
+<meta name="theme-color" content="#0a0a0c">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <title>MinApp</title>
@@ -347,17 +347,17 @@
 </head>
 <body>
 
-<div id="login-screen" style="position:fixed;inset:0;background:#0f0f0f;display:flex;align-items:center;justify-content:center;z-index:9999;padding:24px;">
+<div id="login-screen" style="position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:9999;padding:24px;">
   <div style="width:100%;max-width:320px;text-align:center;">
     <div style="font-size:48px;margin-bottom:8px;">🔐</div>
-    <h1 style="font-size:26px;font-weight:800;color:#f0f0f0;margin-bottom:4px;">MinApp</h1>
-    <p style="font-size:14px;color:#9a9a9a;margin-bottom:32px;">Indtast adgangskode</p>
+    <h1 style="font-size:26px;font-weight:800;color:var(--text);margin-bottom:4px;">MinApp</h1>
+    <p style="font-size:14px;color:var(--text2);margin-bottom:32px;">Indtast adgangskode</p>
     <input type="password" id="login-pw" placeholder="••••"
-      style="width:100%;background:#1a1a1a;border:1px solid #2e2e2e;border-radius:14px;color:#f0f0f0;font-size:22px;text-align:center;padding:16px;outline:none;letter-spacing:8px;font-family:inherit;margin-bottom:12px;"
+      style="width:100%;background:var(--glass-raised);border:1px solid var(--stroke);border-radius:16px;color:var(--text);font-size:22px;text-align:center;padding:16px;outline:none;letter-spacing:8px;font-family:inherit;margin-bottom:12px;backdrop-filter:blur(var(--blur));-webkit-backdrop-filter:blur(var(--blur));"
       onkeydown="if(event.key==='Enter')checkPassword()">
-    <div id="login-error" style="color:#ff453a;font-size:14px;min-height:20px;margin-bottom:12px;"></div>
+    <div id="login-error" style="color:var(--red);font-size:14px;min-height:20px;margin-bottom:12px;"></div>
     <button onclick="checkPassword()"
-      style="width:100%;background:#4f8ef7;border:none;border-radius:14px;color:#fff;font-size:16px;font-weight:700;padding:16px;cursor:pointer;">
+      style="width:100%;background:var(--accent);border:none;border-radius:16px;color:#fff;font-size:16px;font-weight:700;padding:16px;cursor:pointer;box-shadow:0 8px 24px -8px var(--accent);">
       Log ind
     </button>
   </div>
@@ -692,10 +692,10 @@
       <div class="form-group"><label>Forfaldsdato</label><input type="date" id="td-date"></div>
       <div class="form-group"><label>Prioritet</label>
         <select id="td-priority">
-          <option value="4">Ingen</option>
-          <option value="3">Lav 🔵</option>
-          <option value="2">Medium 🟠</option>
-          <option value="1">Høj 🔴</option>
+          <option value="4">Ingen · +10 XP</option>
+          <option value="3">Lav 🔵 · +10 XP</option>
+          <option value="2">Medium 🟠 · +15 XP</option>
+          <option value="1">Høj 🔴 · +25 XP</option>
         </select>
       </div>
     </div>
@@ -2950,8 +2950,17 @@ function openXPModal() {
     </div>`;
   };
 
+  // Næste belønning: nærmeste kommende farve, titel eller visuel perk over nuværende level
+  const rewards = [
+    ...XP_COLORS.map(c => ({ level:c.level, text:`🎨 Ny farve: ${c.name}` })),
+    ...XP_TITLES.map(t => ({ level:t.level, text:`${t.emoji} Ny titel: ${t.title}` })),
+    { level:25, text:'👑 Guld-kant om XP-banneret' },
+    { level:30, text:'🚀 Animeret regnbue-bar' },
+  ].filter(r => r.level > curLevel).sort((a,b) => a.level - b.level);
+  const nextReward = rewards[0];
+
   document.getElementById('xp-modal-body').innerHTML = `
-    <div style="display:flex;align-items:center;gap:14px;margin-bottom:18px">
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px">
       <div class="xp-ring" style="width:56px;height:56px;font-size:22px">${li.level}</div>
       <div>
         <div style="font-size:20px;font-weight:800">${li.emoji} ${li.title}</div>
@@ -2959,8 +2968,28 @@ function openXPModal() {
       </div>
     </div>
 
+    ${nextReward ? `<div class="card-raised" style="margin-bottom:12px">
+      <div style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:4px">Næste belønning · Level ${nextReward.level}</div>
+      <div style="font-size:15px;font-weight:700">${nextReward.text}</div>
+      <div style="font-size:12px;color:var(--text2);margin-top:4px">Du mangler ${(50*(nextReward.level-1)**2 - xp).toLocaleString('da-DK')} XP</div>
+    </div>` : ''}
+
     <div class="card" style="margin-bottom:12px">
-      <div class="card-title">XP-kilder</div>
+      <div class="card-title">Sådan tjener du XP</div>
+      <div style="display:flex;flex-direction:column;gap:8px;font-size:13px">
+        <div style="display:flex;justify-content:space-between"><span style="color:var(--text2)">🏒 Træningssession</span><span style="font-weight:600">+30 <span style="color:var(--text2);font-weight:400">+ 1 pr. 5 min</span></span></div>
+        <div style="display:flex;justify-content:space-between"><span style="color:var(--text2)">🏃 Løb (oveni)</span><span style="font-weight:600">+3 pr. km</span></div>
+        <div style="display:flex;justify-content:space-between"><span style="color:var(--text2)">🔥 Habit afkrydset</span><span style="font-weight:600">+10</span></div>
+        <div style="display:flex;justify-content:space-between"><span style="color:var(--text2)">🔥 Alle dagens habits</span><span style="font-weight:600">+15 bonus</span></div>
+        <div style="display:flex;justify-content:space-between"><span style="color:var(--text2)">✅ Todo — ingen/lav prioritet</span><span style="font-weight:600">+10</span></div>
+        <div style="display:flex;justify-content:space-between"><span style="color:var(--text2)">🟠 Todo — medium prioritet</span><span style="font-weight:600">+15</span></div>
+        <div style="display:flex;justify-content:space-between"><span style="color:var(--text2)">🔴 Todo — høj prioritet</span><span style="font-weight:600">+25</span></div>
+      </div>
+      <div style="font-size:11px;color:var(--text2);margin-top:10px">Skole og økonomi giver ikke XP.</div>
+    </div>
+
+    <div class="card" style="margin-bottom:12px">
+      <div class="card-title">Din XP indtil nu</div>
       ${srcRow('🏒','Træning',bd.tr,'#4f8ef7')}
       ${srcRow('🔥','Habits',bd.hb,'#ff375f')}
       ${srcRow('✅','Todos',bd.td,'#30d158')}
@@ -2980,15 +3009,17 @@ function openXPModal() {
     </div>
 
     <div class="card" style="margin-bottom:12px">
-      <div class="card-title">🎨 Accentfarve</div>
-      <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <div class="card-title">🎨 Accentfarve — låses op med levels</div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap">
         ${XP_COLORS.map(c => {
           const locked = curLevel < c.level;
           const active = accent.toLowerCase() === c.hex.toLowerCase();
-          return `<div class="xp-color ${locked?'locked':''} ${active?'active':''}" style="background:${c.hex}" title="${c.name}${locked?' (Lvl '+c.level+')':''}" onclick="selectAccent('${c.hex}',${c.level})">${locked?'🔒':(active?'✓':'')}</div>`;
+          return `<div style="text-align:center;width:46px">
+            <div class="xp-color ${locked?'locked':''} ${active?'active':''}" style="background:${c.hex};margin:0 auto" onclick="selectAccent('${c.hex}',${c.level})">${locked?'🔒':(active?'✓':'')}</div>
+            <div style="font-size:10px;color:${locked?'var(--text2)':'var(--text)'};margin-top:4px;font-weight:${active?'700':'400'}">${locked?'Lvl '+c.level:c.name}</div>
+          </div>`;
         }).join('')}
       </div>
-      <div style="font-size:11px;color:var(--text2);margin-top:8px">Låste farver åbnes når du når det viste level.</div>
     </div>
 
     <div class="card">
@@ -3022,7 +3053,7 @@ async function checkPassword() {
     const inp = document.getElementById('login-pw');
     inp.style.borderColor = '#ff453a';
     inp.value = '';
-    setTimeout(() => { err.textContent = ''; inp.style.borderColor = '#2e2e2e'; }, 2000);
+    setTimeout(() => { err.textContent = ''; inp.style.borderColor = 'var(--stroke)'; }, 2000);
   }
 }
 
