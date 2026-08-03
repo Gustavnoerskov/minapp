@@ -901,7 +901,9 @@ function openModal(id) {
   // Pre-fill date selects for current week
   const modId = id.replace('modal-','');
   const selId = {training:'tr-date', school:'sc-date', ft:'ft-date', arbejde:'arb-date'}[modId];
-  if (selId) populateDateSelect(selId);
+  // Forudvælg den dag der er markeret i kategoriens ugegitter
+  const preDay = {training:selectedDay.traening, school:selectedDay.skole, ft:selectedDay.ft, arbejde:selectedDay.arbejde}[modId] || null;
+  if (selId) populateDateSelect(selId, preDay);
   // Byg kategori-pills dynamisk (medmindre editEvent allerede har sat dem)
   if (!editingEventId && !editingTodoId) {
     if (id === 'modal-training') renderTagRow('tr-type-row','tr');
@@ -917,7 +919,7 @@ function openModal(id) {
     document.getElementById('ik-note').value = '';
   }
   // Show type-dependent fields for training
-  if (id === 'modal-arbejde') { populateDateSelect('arb-date'); updateArbejdeFields(); }
+  if (id === 'modal-arbejde') updateArbejdeFields();
   if (id === 'modal-training') updateTrainingFields();
   document.getElementById(id).classList.add('open');
 }
@@ -1174,8 +1176,11 @@ function tagClick(el, rowId, key) {
 }
 
 function addCat(rowId, key) {
-  const name = prompt('Navn på ny kategori:');
-  if (!name || !name.trim()) return;
+  let name = prompt('Navn på ny kategori:');
+  if (!name) return;
+  // Rens tegn der kan knække inline-HTML (anførselstegn, < > og backslash)
+  name = name.replace(/['"<>\\`]/g, '').trim();
+  if (!name) return;
   const cats = getCats(key);
   if (cats.find(c => c.val.toLowerCase() === name.trim().toLowerCase())) { alert('Findes allerede'); return; }
   const color = CAT_PALETTE[cats.length % CAT_PALETTE.length];
@@ -1289,6 +1294,7 @@ function saveTraining() {
   closeModal('modal-training');
   renderTrainingWeek();
   if (currentView === 'planer') renderPlaner();
+  checkLevelUp(); // træning giver XP — fejr level-up med det samme
   document.getElementById('tr-note').value = '';
 }
 
@@ -1510,6 +1516,7 @@ function deleteEvent(id, containerId, date, category, color) {
     if (category === 'traening') renderTrainingWeek();
     if (category === 'skole') renderSchoolWeek();
     if (category === 'ft') renderFTWeek();
+    if (category === 'arbejde') renderArbejdeWeek();
     if (currentView === 'overblik') renderOverblik();
     if (currentView === 'planer') renderPlaner();
   }
@@ -1693,8 +1700,30 @@ function renderDash() {
 function renderPlaner() {
   renderToday();
   renderUpcoming();
-  renderPlanerWeek();
-  renderPlanerDay(todayStr());
+  renderPlanerCal();
+  renderPlanerDay(window.planerSelectedDay || todayStr());
+}
+
+// Uge/Måned-visning
+window.planerMode = 'uge';
+window.planerMonthOffset = 0;
+
+function setPlanerMode(m) {
+  window.planerMode = m;
+  renderPlanerCal();
+}
+
+function renderPlanerCal() {
+  if (window.planerMode === 'maaned') renderPlanerMonth();
+  else renderPlanerWeek();
+}
+
+function planerModeToggle() {
+  const m = window.planerMode;
+  return `<div class="subtabs" style="margin-bottom:12px">
+    <button class="subtab ${m==='uge'?'active':''}" onclick="setPlanerMode('uge')">Uge</button>
+    <button class="subtab ${m==='maaned'?'active':''}" onclick="setPlanerMode('maaned')">Måned</button>
+  </div>`;
 }
 
 function renderPlanerWeek() {
@@ -1722,7 +1751,8 @@ function renderPlanerWeek() {
   // Header med uge-navigation
   const weekStart = dateStr(monday);
   const weekEnd = dateStr(days[6]);
-  el.innerHTML = `
+  const selS = window.planerSelectedDay;
+  el.innerHTML = planerModeToggle() + `
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
       <button onclick="changePlanerWeek(-1)" style="background:none;border:none;font-size:22px;color:var(--text);cursor:pointer;padding:4px 10px">‹</button>
       <span style="font-size:14px;font-weight:600;color:var(--text2)">${days[0].getDate()}. ${MONTHS[days[0].getMonth()].slice(0,3)} – ${days[6].getDate()}. ${MONTHS[days[6].getMonth()].slice(0,3)}</span>
@@ -1733,11 +1763,12 @@ function renderPlanerWeek() {
         const ds = dateStr(d);
         const dayEv = events.filter(e => e.date === ds).sort((a,b) => a.startTime.localeCompare(b.startTime));
         const isToday = ds === todayS;
+        const isSel = ds === selS;
         const dots = [...new Set(dayEv.map(e => colorMap[e.category] || '#8e8e93'))];
         return `<div onclick="selectPlanerDay('${ds}')" id="planer-day-${ds}" style="
           background:${isToday ? 'var(--accent)' : 'var(--bg2)'};
           border-radius:var(--radius-sm);padding:8px 4px;text-align:center;cursor:pointer;
-          border:2px solid ${isToday ? 'var(--accent)' : 'transparent'};min-height:62px">
+          border:2px solid ${isToday ? 'var(--accent)' : isSel ? 'var(--accent)' : 'transparent'};min-height:62px">
           <div style="font-size:11px;color:${isToday?'#fff':'var(--text2)'};margin-bottom:2px">${DAYS_SHORT[i]}</div>
           <div style="font-size:18px;font-weight:700;color:${isToday?'#fff':'var(--text)'}">${d.getDate()}</div>
           <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:2px;margin-top:4px">
@@ -1749,16 +1780,77 @@ function renderPlanerWeek() {
   `;
 }
 
+// Månedsvisning: hele måneden med prikker — tryk på en dag for detaljer
+function renderPlanerMonth() {
+  const el = document.getElementById('planer-week');
+  if (!el) return;
+  const events = DB.events();
+  const colorMap = { traening: '#4f8ef7', skole: '#bf5af2', ft: '#ff9f0a', arbejde: '#34c759' };
+
+  const base = new Date();
+  base.setDate(1);
+  base.setMonth(base.getMonth() + (window.planerMonthOffset || 0));
+  const y = base.getFullYear(), m = base.getMonth();
+  const daysInMonth = new Date(y, m + 1, 0).getDate();
+  const startOffset = (new Date(y, m, 1).getDay() + 6) % 7; // dage før d. 1 (fra mandag)
+  const weeks = Math.ceil((startOffset + daysInMonth) / 7);
+  const gridStart = new Date(y, m, 1 - startOffset);
+
+  const todayS = todayStr();
+  const selS = window.planerSelectedDay;
+  const cells = [];
+  for (let i = 0; i < weeks * 7; i++) {
+    const d = new Date(gridStart);
+    d.setDate(gridStart.getDate() + i);
+    cells.push(d);
+  }
+
+  el.innerHTML = planerModeToggle() + `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <button onclick="changePlanerWeek(-1)" style="background:none;border:none;font-size:22px;color:var(--text);cursor:pointer;padding:4px 10px">‹</button>
+      <span style="font-size:14px;font-weight:600;color:var(--text2)">${MONTHS[m].charAt(0).toUpperCase() + MONTHS[m].slice(1)} ${y}</span>
+      <button onclick="changePlanerWeek(1)" style="background:none;border:none;font-size:22px;color:var(--text);cursor:pointer;padding:4px 10px">›</button>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:4px">
+      ${['M','T','O','T','F','L','S'].map(l => `<div style="font-size:10px;color:var(--text2);text-align:center;font-weight:600">${l}</div>`).join('')}
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px">
+      ${cells.map(d => {
+        const ds = dateStr(d);
+        const inMonth = d.getMonth() === m;
+        const isToday = ds === todayS;
+        const isSel = ds === selS;
+        const dots = [...new Set(events.filter(e => e.date === ds).map(e => colorMap[e.category] || '#8e8e93'))];
+        return `<div onclick="selectPlanerDay('${ds}')" style="
+          background:${isToday ? 'var(--accent)' : 'var(--bg2)'};
+          border-radius:10px;padding:5px 2px 4px;text-align:center;cursor:pointer;min-height:44px;
+          border:2px solid ${isToday || isSel ? 'var(--accent)' : 'transparent'};
+          opacity:${inMonth ? 1 : 0.35}">
+          <div style="font-size:13px;font-weight:${isToday?'800':'600'};color:${isToday?'#fff':'var(--text)'}">${d.getDate()}</div>
+          <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:2px;margin-top:2px;min-height:6px">
+            ${dots.slice(0,4).map(c => `<div style="width:5px;height:5px;border-radius:50%;background:${isToday?'#fff':c}"></div>`).join('')}
+          </div>
+        </div>`;
+      }).join('')}
+    </div>
+  `;
+}
+
 window.planerWeekOffset = 0;
 window.planerSelectedDay = todayStr ? todayStr() : '';
 
 function changePlanerWeek(dir) {
-  window.planerWeekOffset = (window.planerWeekOffset || 0) + dir;
-  renderPlanerWeek();
+  if (window.planerMode === 'maaned') {
+    window.planerMonthOffset = (window.planerMonthOffset || 0) + dir;
+  } else {
+    window.planerWeekOffset = (window.planerWeekOffset || 0) + dir;
+  }
+  renderPlanerCal();
 }
 
 function selectPlanerDay(ds) {
   window.planerSelectedDay = ds;
+  renderPlanerCal(); // flyt markeringen
   renderPlanerDay(ds);
 }
 
@@ -1776,7 +1868,8 @@ function renderPlanerDay(ds) {
   if (!el) return;
   const events = DB.events().filter(e => e.date === ds).sort((a,b) => a.startTime.localeCompare(b.startTime));
   const colorMap = { traening: '#4f8ef7', skole: '#bf5af2', ft: '#ff9f0a', arbejde: '#34c759' };
-  const catLabel = { traening: 'Træning', skole: 'Skole', ft: 'Free Time', arbejde: 'Arbejde' };
+  const catNames = { traening: 'Træning', skole: 'Skole', ft: 'Free Time', arbejde: 'Arbejde' };
+  const catKeyMap = { traening: 'tr', skole: 'sc', arbejde: 'arb' }; // til pæne type-labels
   const d = new Date(ds + 'T12:00:00');
   const DAYS = ['Søndag','Mandag','Tirsdag','Onsdag','Torsdag','Fredag','Lørdag'];
 
@@ -1786,8 +1879,9 @@ function renderPlanerDay(ds) {
       ? `<div style="font-size:14px;color:var(--text2)">Ingen aftaler</div>`
       : events.map(e => {
           const color = colorMap[e.category] || '#8e8e93';
-          const label = catLabel[e.category] || e.category;
-          const sub = e.type ? ` · ${e.type}` : '';
+          const label = catNames[e.category] || e.category;
+          const typeLbl = e.type ? (catKeyMap[e.category] ? catLabel(catKeyMap[e.category], e.type) : e.type) : '';
+          const sub = typeLbl ? ` · ${typeLbl}` : '';
           const hvem = e.who ? ` · ${e.who}` : '';
           return `<div style="display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">
             <div style="width:4px;min-height:40px;border-radius:2px;background:${color};flex-shrink:0;margin-top:2px"></div>
@@ -2381,6 +2475,7 @@ function toggleTodo(id) {
   DB.updateTodo(id, { completed: !t.completed, completedAt: !t.completed ? new Date().toISOString() : null });
   renderTodos();
   if (currentView === 'overblik') renderOverblik();
+  checkLevelUp(); // fejr level-up med det samme, uanset fane
 }
 
 function deleteTodoItem(id) {
@@ -2412,7 +2507,9 @@ function renderTodos() {
 
   let todos = DB.todos().filter(t => !t.completed);
   if (todoFilter !== 'Alle') todos = todos.filter(t => t.project === todoFilter);
-  const completed = DB.todos().filter(t => t.completed).slice(0, 10);
+  // Senest fuldførte øverst, vis max 10
+  const completed = DB.todos().filter(t => t.completed)
+    .sort((a,b) => (b.completedAt || '').localeCompare(a.completedAt || '')).slice(0, 10);
 
   const today = todayStr();
   const tomorrow = dateStr(new Date(Date.now() + 86400000));
@@ -2491,6 +2588,7 @@ function toggleHabit(date, id) {
   DB.toggleHabitDone(date, id);
   renderHabits();
   if (currentView === 'overblik') renderOverblik();
+  checkLevelUp(); // fejr level-up med det samme, uanset fane
 }
 
 function getHabitStreak(id) {
@@ -2842,7 +2940,8 @@ function xpBreakdown(fromDate = null, toDate = null) {
     .forEach(e => { tr += xpForTraining(e); });
 
   DB.todos().filter(t => t.completed).forEach(t => {
-    const ds = (t.completedAt || '').slice(0,10) || t.dueDate || null;
+    // Lokal dato fra completedAt (slice på ISO-strengen ville give UTC-dato → forkert dag kl. 00-02)
+    const ds = t.completedAt ? dateStr(new Date(t.completedAt)) : (t.dueDate || null);
     // Uden dato: kun med i total (når intet interval er sat)
     if (ds ? inRange(ds) : (!fromDate && !toDate)) {
       const p = t.priority || 4;
@@ -3051,7 +3150,7 @@ async function checkPassword() {
     const err = document.getElementById('login-error');
     err.textContent = 'Forkert kode — prøv igen';
     const inp = document.getElementById('login-pw');
-    inp.style.borderColor = '#ff453a';
+    inp.style.borderColor = 'var(--red)';
     inp.value = '';
     setTimeout(() => { err.textContent = ''; inp.style.borderColor = 'var(--stroke)'; }, 2000);
   }
