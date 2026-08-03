@@ -1495,7 +1495,11 @@ function renderDayEvents(containerId, date, category, color) {
     if (e.category === 'ft' && e.who) sub += ` · ${e.who}`;
     if (e.category === 'skole' && e.type) sub += ` · ${e.type}`;
     if (e.category === 'arbejde' && e.type === 'Ishockeydommer') sub += ` · Honorar: ${e.honorar||0} kr · Kørsel: ${e.koersel||0} kr`;
-    else if (e.category === 'arbejde' && e.type) sub += ` · ${e.type}`;
+    else if (e.category === 'arbejde' && e.type) {
+      sub += ` · ${catLabel('arb', e.type)}`;
+      const r = jobRate(e.type);
+      if (r > 0) sub += ` · ${fmtKr(getDurationHours(e.startTime, e.endTime) * r)}`;
+    }
     return `<div class="event-item">
       <div class="event-color" style="background:${color}"></div>
       <div class="event-info">
@@ -1650,25 +1654,19 @@ function renderDash() {
     </div>` : ''}
 
     ${(() => {
-      // Begge indtægtskilder regnes fra kalendermåneden — samme grundlag som Økonomi-fanen
+      // Alle indtægtskilder regnes fra kalendermåneden — samme grundlag som Økonomi-fanen
       const mo = today.slice(0,7);
-      const allEv = DB.events();
-      const elHrs = allEv.filter(e=>e.category==='arbejde'&&e.type==='Elektriker'&&e.date.startsWith(mo)).reduce((s,e)=>s+getDurationHours(e.startTime,e.endTime),0);
-      const domEv = allEv.filter(e=>e.category==='arbejde'&&e.type==='Ishockeydommer'&&e.date.startsWith(mo));
-      const domKr = domEv.reduce((s,e)=>s+(e.honorar||0)+(e.koersel||0),0);
-      const totalInd = Math.round(elHrs*ELEKTRIKER_RATE + domKr);
+      const inc = computeIncome(DB.events().filter(e => e.date.startsWith(mo)));
+      const totalInd = Math.round(inc.total);
       if (totalInd === 0) return '';
       // Efter skat-estimat hvis trækprocent er sat
       const skat = getSkat();
       const suFast = skat.su || 0;
       let nettoLinje = '';
       if (skat.pct !== null && skat.pct !== undefined && skat.pct !== '') {
-        const domHonKun = domEv.reduce((s,e)=>s+(e.honorar||0),0);
-        const domKrsKun = domEv.reduce((s,e)=>s+(e.koersel||0),0);
-        const brutto = elHrs*ELEKTRIKER_RATE + domHonKun;
-        const am = brutto*0.08;
-        const grundlag = Math.max(0, brutto - am + suFast - (skat.fradrag||0));
-        const nettoEst = Math.round(brutto - am + suFast - grundlag*skat.pct/100 + domKrsKun);
+        const am = inc.brutto*0.08;
+        const grundlag = Math.max(0, inc.brutto - am + suFast - (skat.fradrag||0));
+        const nettoEst = Math.round(inc.brutto - am + suFast - grundlag*skat.pct/100 + inc.koersel);
         nettoLinje = `<div style="font-size:13px;color:var(--green);margin-top:4px">≈ ${nettoEst.toLocaleString('da-DK')} kr udbetalt${suFast>0?' (inkl. SU)':' efter skat'}</div>`;
       }
       return `<div class="card" style="margin-bottom:10px">
@@ -1676,8 +1674,8 @@ function renderDash() {
         <div style="font-size:26px;font-weight:800;color:var(--green);margin-top:4px;font-variant-numeric:tabular-nums">${totalInd.toLocaleString('da-DK')} kr</div>
         ${nettoLinje}
         <div style="font-size:12px;color:var(--text2);margin-top:6px;display:flex;gap:12px;flex-wrap:wrap">
-          ${elHrs>0?`<span>⚡ ${fmtH(elHrs)} elektriker</span>`:''}
-          ${domKr>0?`<span>🏒 ${domEv.length} kampe dommer</span>`:''}
+          ${inc.jobs.map(j => `<span>${catLabel('arb', j.type)} ${fmtH(j.hours)}</span>`).join('')}
+          ${inc.domEv.length>0?`<span>🏒 ${inc.domEv.length} kampe dommer</span>`:''}
         </div>
       </div>`;
     })()}
@@ -2113,7 +2111,58 @@ function renderIndkoeb() {
 }
 
 // ===================== TRACKER =====================
-const ELEKTRIKER_RATE = 232;
+// Timeløn pr. arbejdstype — sættes i appen under Økonomi (Elektriker starter på 232)
+const DEFAULT_JOB_RATES = { Elektriker: 232 };
+
+function getJobRates() {
+  try {
+    const stored = JSON.parse(localStorage.getItem('jobRates') || 'null');
+    return stored && typeof stored === 'object' ? { ...DEFAULT_JOB_RATES, ...stored } : { ...DEFAULT_JOB_RATES };
+  } catch { return { ...DEFAULT_JOB_RATES }; }
+}
+
+function jobRate(type) { return parseFloat(getJobRates()[type]) || 0; }
+
+function saveJobRates() {
+  const rates = {};
+  document.querySelectorAll('[data-jobrate]').forEach(inp => {
+    const v = parseFloat(inp.value);
+    if (!isNaN(v) && v >= 0) rates[inp.dataset.jobrate] = v;
+  });
+  localStorage.setItem('jobRates', JSON.stringify(rates));
+  renderOkonomi();
+  if (currentView === 'overblik') renderOverblik();
+}
+
+// Arbejdstyper der aflønnes pr. time (Dommer bruger honorar/kørsel i stedet)
+function hourlyJobTypes() {
+  return getCats('arb').map(c => c.val).filter(v => v !== 'Ishockeydommer');
+}
+
+// Samlet indtægtsberegning for en liste af events — opdelt pr. job
+function computeIncome(events) {
+  const rates = getJobRates();
+  const arbEv = events.filter(e => e.category === 'arbejde');
+  const byType = {};
+  arbEv.filter(e => e.type !== 'Ishockeydommer').forEach(e => {
+    const r = parseFloat(rates[e.type]) || 0;
+    if (r <= 0) return; // typer uden timeløn (fx Møde) tæller ikke som indtægt
+    if (!byType[e.type]) byType[e.type] = { type: e.type, hours: 0, pay: 0, rate: r };
+    const h = getDurationHours(e.startTime, e.endTime);
+    byType[e.type].hours += h;
+    byType[e.type].pay += h * r;
+  });
+  const domEv = arbEv.filter(e => e.type === 'Ishockeydommer');
+  const honorar = domEv.reduce((s, e) => s + (e.honorar || 0), 0);
+  const koersel = domEv.reduce((s, e) => s + (e.koersel || 0), 0);
+  const jobs = Object.values(byType).sort((a, b) => b.pay - a.pay);
+  const loenSum = jobs.reduce((s, j) => s + j.pay, 0);
+  return {
+    jobs, domEv, honorar, koersel, loenSum,
+    brutto: loenSum + honorar,          // skattepligtig (kørsel er skattefri)
+    total: loenSum + honorar + koersel, // samlet indtægt
+  };
+}
 
 function getLonPeriod() {
   const today = new Date();
@@ -2196,11 +2245,11 @@ function renderTracker() {
     ftByHvem[h] = { count: sub.length, hours: sub.reduce((s,e) => s + getDurationHours(e.startTime, e.endTime), 0) };
   });
 
-  // --- ELEKTRIKER (lønperiode) ---
+  // --- TIMELØNNEDE JOBS (lønperiode) ---
   const lonStart = dateStr(lon.start), lonEnd = dateStr(lon.end);
-  const elEv = events.filter(e => e.category === 'arbejde' && e.type === 'Elektriker' && e.date >= lonStart && e.date < lonEnd);
-  const elHours = elEv.reduce((s, e) => s + getDurationHours(e.startTime, e.endTime), 0);
-  const elPay = elHours * ELEKTRIKER_RATE;
+  const lonIncome = computeIncome(events.filter(e => e.date >= lonStart && e.date < lonEnd));
+  const elHours = lonIncome.jobs.reduce((s, j) => s + j.hours, 0);
+  const elPay = lonIncome.loenSum;
 
   // --- ISHOCKEYDOMMER (denne måned) ---
   const domEv = events.filter(e => e.category === 'arbejde' && e.type === 'Ishockeydommer' && e.date >= mStart && e.date <= mEnd);
@@ -2320,17 +2369,24 @@ function renderTracker() {
 
     <div class="card" style="margin-bottom:10px">
       <div style="font-weight:700;margin-bottom:4px">💰 Lønperiode</div>
-      <div style="font-size:12px;color:var(--text2);margin-bottom:12px">${lonLabel} · ⚡ Elektriker</div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:12px">${lonLabel}</div>
+      ${lonIncome.jobs.length > 1 ? `<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px">
+        ${lonIncome.jobs.map(j => `<div style="display:flex;justify-content:space-between;align-items:center;font-size:13px">
+          <span style="color:var(--text2)">${catLabel('arb', j.type)} <span style="font-size:11px">· ${j.rate} kr/t</span></span>
+          <span style="font-weight:600">${fmtH(j.hours)} · <span style="color:var(--green)">${fmtKr(j.pay)}</span></span>
+        </div>`).join('')}
+      </div>` : ''}
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
         <div class="stat-box">
           <div class="stat-val" style="color:var(--green)">${fmtH(elHours)}</div>
-          <div class="stat-label">Timer registreret</div>
+          <div class="stat-label">Timer i alt</div>
         </div>
         <div class="stat-box">
           <div class="stat-val" style="color:var(--green)">${fmtKr(elPay)}</div>
           <div class="stat-label">Forventet løn</div>
         </div>
       </div>
+      ${lonIncome.jobs.length === 0 ? `<div style="font-size:12px;color:var(--text2);margin-bottom:12px">Sæt timeløn under 💰 Økonomi for at se forventet løn</div>` : ''}
       <div onclick="toggleLonPaid('${lon.key}')" style="display:flex;align-items:center;gap:12px;padding:12px;background:var(--bg3);border-radius:var(--radius-sm);cursor:pointer">
         <div style="width:26px;height:26px;border-radius:6px;border:2px solid ${lonPaid?'var(--green)':'var(--border)'};background:${lonPaid?'var(--green)':'transparent'};display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.2s">
           ${lonPaid?'<span style="color:#fff;font-size:15px;font-weight:700">✓</span>':''}
@@ -2356,7 +2412,7 @@ function exportData() {
   const extra = {};
   for (let i = 0; i < localStorage.length; i++) {
     const k = localStorage.key(i);
-    if (k.startsWith('hd_') || k.startsWith('maal_') || k.startsWith('indkoebMaal_') || k.startsWith('lonPaid_') || k.startsWith('cats_') || k === 'skat' || k === 'lastSeenLevel' || k === 'xpAccent') {
+    if (k.startsWith('hd_') || k.startsWith('maal_') || k.startsWith('indkoebMaal_') || k.startsWith('lonPaid_') || k.startsWith('cats_') || k === 'skat' || k === 'jobRates' || k === 'lastSeenLevel' || k === 'xpAccent') {
       extra[k] = localStorage.getItem(k);
     }
   }
@@ -2756,15 +2812,13 @@ function renderOkonomi() {
   const mEnd = `${mo}-31`;
   const events = DB.events().filter(e => e.date >= mStart && e.date <= mEnd);
 
-  const elEv = events.filter(e => e.category==='arbejde' && e.type==='Elektriker');
-  const elHrs = elEv.reduce((s,e)=>s+getDurationHours(e.startTime,e.endTime),0);
-  const elLon = elHrs * ELEKTRIKER_RATE;
+  // Indtægt opdelt pr. job (timelønnede) + dommerhonorar
+  const inc = computeIncome(events);
+  const domEv = inc.domEv;
+  const domHon = inc.honorar;
+  const domKrs = inc.koersel;
 
-  const domEv = events.filter(e => e.category==='arbejde' && e.type==='Ishockeydommer');
-  const domHon = domEv.reduce((s,e)=>s+(e.honorar||0),0);
-  const domKrs = domEv.reduce((s,e)=>s+(e.koersel||0),0);
-
-  const totalIndtaegt = elLon + domHon + domKrs;
+  const totalIndtaegt = inc.total;
 
   // --- SKAT & SU ---
   // Kørsel er skattefri godtgørelse. SU er skattepligtig (men uden AM-bidrag) og
@@ -2772,7 +2826,7 @@ function renderOkonomi() {
   const skat = getSkat();
   const su = skat.su || 0;
   const harSkat = skat.pct !== null && skat.pct !== undefined && skat.pct !== '';
-  const brutto = elLon + domHon;            // skattepligtig arbejdsindkomst
+  const brutto = inc.brutto;                 // skattepligtig arbejdsindkomst (løn + honorar)
   const am = brutto * 0.08;                  // AM-bidrag 8% (kun af løn)
   const workEfterAM = brutto - am;
   const grundlag = Math.max(0, workEfterAM + su - (skat.fradrag || 0));
@@ -2791,11 +2845,25 @@ function renderOkonomi() {
     </div>
     <div class="card oko-section">
       <div class="card-title" style="color:var(--green)">💰 Indtægt</div>
-      ${elHrs>0?`<div class="oko-row"><span class="lbl">⚡ Elektriker (${fmtH(elHrs)})</span><span class="val" style="color:var(--green)">${fmtKr(elLon)}</span></div>`:''}
+      ${inc.jobs.map(j => `<div class="oko-row"><span class="lbl">${catLabel('arb', j.type)} (${fmtH(j.hours)} × ${j.rate} kr)</span><span class="val" style="color:var(--green)">${fmtKr(j.pay)}</span></div>`).join('')}
       ${domHon>0?`<div class="oko-row"><span class="lbl">🏒 Dommer honorar (${domEv.length} kampe)</span><span class="val" style="color:var(--green)">${fmtKr(domHon)}</span></div>`:''}
       ${domKrs>0?`<div class="oko-row"><span class="lbl">🚗 Dommer kørsel (skattefri)</span><span class="val" style="color:var(--green)">${fmtKr(domKrs)}</span></div>`:''}
       ${totalIndtaegt===0?`<div style="font-size:13px;color:var(--text2)">Ingen registreret indtægt</div>`:''}
       <div class="oko-row" style="margin-top:4px"><span class="lbl" style="font-weight:700">Total brutto</span><span class="val" style="color:var(--green);font-size:17px">${fmtKr(totalIndtaegt)}</span></div>
+    </div>
+
+    <div class="card oko-section">
+      <div class="card-title">💼 Timeløn pr. job</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        ${hourlyJobTypes().map(t => `<div style="display:flex;align-items:center;gap:10px">
+          <span style="flex:1;font-size:14px">${catLabel('arb', t)}</span>
+          <input type="number" data-jobrate="${t}" value="${getJobRates()[t] ?? ''}" placeholder="kr/time" step="0.01"
+            style="width:110px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:14px;padding:8px 10px;outline:none;font-family:inherit;text-align:right">
+          <span style="font-size:12px;color:var(--text2);width:32px">kr/t</span>
+        </div>`).join('')}
+      </div>
+      <button class="btn btn-primary btn-sm" style="width:100%;margin-top:10px" onclick="saveJobRates()">Gem timelønninger</button>
+      <div style="font-size:11px;color:var(--text2);margin-top:8px">Lad feltet stå tomt for typer uden løn (fx møder). 🏒 Dommer aflønnes pr. kamp med honorar og kørsel — ikke pr. time. Nye jobs oprettes som arbejdstyper under ➕ i "Tilføj arbejde".</div>
     </div>
     <div class="card oko-section">
       <div class="card-title">🧾 Skat, SU & nettoløn</div>
@@ -2835,8 +2903,7 @@ function renderOkoChart() {
   const data = months6.map(mo => {
     const mStart=`${mo}-01`, mEnd=`${mo}-31`;
     const ev = DB.events().filter(e=>e.date>=mStart&&e.date<=mEnd);
-    const ind = ev.filter(e=>e.category==='arbejde'&&e.type==='Elektriker').reduce((s,e)=>s+getDurationHours(e.startTime,e.endTime),0)*ELEKTRIKER_RATE
-      + ev.filter(e=>e.category==='arbejde'&&e.type==='Ishockeydommer').reduce((s,e)=>s+(e.honorar||0)+(e.koersel||0),0);
+    const ind = computeIncome(ev).total;
     const udg = DB.indkoeb().filter(e=>e.date.startsWith(mo)).reduce((s,e)=>s+e.amount,0)
       + DB.fuel().filter(e=>e.date.startsWith(mo)).reduce((s,e)=>s+e.amount,0);
     return { mo, ind: Math.round(ind), udg: Math.round(udg) };
